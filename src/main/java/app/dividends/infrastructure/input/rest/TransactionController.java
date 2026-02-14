@@ -22,7 +22,7 @@ public class TransactionController {
 	public ResponseEntity<String> uploadFile(
 			@RequestParam("file") MultipartFile file,
 			@RequestParam("format") String format) {
-		fileImportUseCase.importFile(file, format);
-		return new ResponseEntity<String>("File Imported", HttpStatus.OK);
+		int transactionFiles = fileImportUseCase.importFile(file, format);
+		return new ResponseEntity<String>("File Imported. " + transactionFiles + " new transactions added", HttpStatus.OK);
 	}
 }

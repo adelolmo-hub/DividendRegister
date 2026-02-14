@@ -19,13 +19,11 @@ public class HashUtils {
     }
 	
 	 public static String hashSHA256(String input) throws NoSuchAlgorithmException {
-	        // 1. Obtener una instancia del algoritmo SHA-256
+	       
 	        MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
-	        // 2. Convertir la entrada a bytes (usando UTF-8 es común)
 	        byte[] encodedhash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
 
-	        // 3. Convertir el array de bytes a una cadena hexadecimal
 	        return bytesToHex(encodedhash);
 	    }
 	
