@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import app.dividends.application.ports.input.FileImportUseCase;
+import app.dividends.domain.model.ImportReport;
 
 @RestController
 @RequestMapping("/api")
@@ -19,10 +20,10 @@ public class TransactionController {
 	FileImportUseCase fileImportUseCase;
 	
 	@PostMapping("/uploadFile")
-	public ResponseEntity<String> uploadFile(
+	public ResponseEntity<ImportReport> uploadFile(
 			@RequestParam("file") MultipartFile file,
 			@RequestParam("format") String format) {
-		fileImportUseCase.importFile(file, format);
-		return new ResponseEntity<String>("File Imported", HttpStatus.OK);
+		ImportReport importReport = fileImportUseCase.importFile(file, format);
+		return new ResponseEntity<ImportReport>(importReport, HttpStatus.OK);
 	}
 }

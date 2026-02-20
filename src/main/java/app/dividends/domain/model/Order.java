@@ -4,7 +4,7 @@ import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 
 @Entity
-@DiscriminatorValue("Dividend")
-public class Dividend extends Transaction{
-	private double taxAmount;
+@DiscriminatorValue("Order")
+public class Order extends Transaction{
+	private double commission;
 }
