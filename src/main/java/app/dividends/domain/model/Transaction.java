@@ -5,10 +5,13 @@ import java.util.Date;
 
 import app.dividends.domain.model.utils.HashUtils;
 import jakarta.persistence.Column;
+import jakarta.persistence.DiscriminatorColumn;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
@@ -16,6 +19,8 @@ import jakarta.persistence.UniqueConstraint;
 @Table(name = "transactions", uniqueConstraints = {
 		@UniqueConstraint(columnNames = "external_id")
 })
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "type")
 public class Transaction {
 
 	@Id
@@ -26,14 +31,13 @@ public class Transaction {
 	String externalId;
 	
 	String ticker;
-	String type;
+	String currency;
 	Double quantity;
 	Double price;
-	Double fees;
 	Date date;
 	
 	public String calculateId() throws NoSuchAlgorithmException {
-		String raw = String.format("%s|%s|%s|%f|%f", date, ticker, type, quantity, price);
+		String raw = String.format("%s|%s|%s|%f", date, ticker, quantity, price);
 		return HashUtils.hashSHA256(raw);
 	}
 
@@ -43,14 +47,6 @@ public class Transaction {
 
 	public void setTicker(String ticker) {
 		this.ticker = ticker;
-	}
-
-	public String getType() {
-		return type;
-	}
-
-	public void setType(String type) {
-		this.type = type;
 	}
 
 	public Double getQuantity() {
@@ -69,14 +65,6 @@ public class Transaction {
 		this.price = price;
 	}
 
-	public Double getFees() {
-		return fees;
-	}
-
-	public void setFees(Double fees) {
-		this.fees = fees;
-	}
-
 	public Date getDate() {
 		return date;
 	}
@@ -91,6 +79,14 @@ public class Transaction {
 
 	public void setExternalId(String external_id) {
 		this.externalId = external_id;
+	}
+	
+	public String getCurrency() {
+		return currency;
+	}
+
+	public void setCurrency(String currency) {
+		this.currency = currency;
 	}
 
 	
