@@ -1,5 +1,7 @@
 package app.dividends.application.service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -41,30 +43,35 @@ public class PortfolioService implements IPortfolioService{
 	private Position calculatePosition(String ticker, List<Transaction> transactions) {
 		int quantity = 0;
 		int absoluteQuantity = 0;
-		double totalCost = 0;
+		BigDecimal totalCost = new BigDecimal("0");
 		
 		List<Dividend> dividends = new LinkedList<>();
 		
 		for(Transaction tx : transactions) {
 			if(tx instanceof Order order) {
-				if(order.getQuantity() > 0){
+				if(order.getQuantity() > 0){ 
+					//Compra
 					quantity += order.getQuantity();
 					absoluteQuantity += order.getQuantity();
-					totalCost += order.getPrice() * order.getQuantity();
-				}else {
-					quantity -= order.getQuantity();
+					totalCost = totalCost.add(order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity())));
+				}else { 
+					//Venta
+					quantity += order.getQuantity();
 				}
 			}else if(tx instanceof DividendTransaction divTx){
+				//Dividendo
 				Dividend d = new Dividend();
 				d.setDate(divTx.getDate());
 				d.setCurrency(divTx.getCurrency());
-				d.setQuantityPerAsset(Objects.requireNonNullElse(divTx.getPrice(), 0.0));
-				d.setTotalRecieved(divTx.getQuantity());
+				d.setQuantityPerAsset(Objects.requireNonNullElse(divTx.getPrice(), BigDecimal.ZERO));
+				d.setTotalRecieved(divTx.getAmountReceived());
 				dividends.add(d);
 			}
 		}
-		
-		double averageCost = totalCost/absoluteQuantity;
+		BigDecimal averageCost = new BigDecimal("0");
+		if (absoluteQuantity != 0) {
+			averageCost = totalCost.divide(BigDecimal.valueOf(absoluteQuantity), 2, RoundingMode.HALF_EVEN);
+		}
 		return new Position(ticker, quantity, averageCost, dividends);
 	}
 	

@@ -1,6 +1,7 @@
 package app.dividends.domain.model;
 
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 import lombok.Getter;
@@ -11,7 +12,7 @@ public class Dividend {
 
 	Date date;
 	String currency;
-	double quantityPerAsset;
-	double totalRecieved;
+	BigDecimal quantityPerAsset;
+	BigDecimal totalRecieved;
 	
 }

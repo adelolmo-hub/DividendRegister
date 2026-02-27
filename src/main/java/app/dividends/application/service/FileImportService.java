@@ -3,6 +3,7 @@ package app.dividends.application.service;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.math.BigDecimal;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Date;
 import java.text.ParseException;
@@ -93,11 +94,11 @@ public class FileImportService implements IFileImportUseCase{
 			dividend = new DividendTransaction();
 			dividend.setTicker(result.ticker());
 			dividend.setCurrency(line[2]);
-			dividend.setQuantity(Double.parseDouble(line[5]));
+			dividend.setAmountReceived(new BigDecimal(line[5]));
 			dividend.setDate(Date.valueOf(line[3]));
 			
 			if(result.price() != null){
-				dividend.setPrice(Double.parseDouble(result.price()));
+				dividend.setPrice(new BigDecimal(result.price()));
 			}
 			String hashId = dividend.calculateId();
 			dividend.setExternalId(hashId);
@@ -111,9 +112,9 @@ public class FileImportService implements IFileImportUseCase{
 		try {
 			order.setTicker(line[5]);
 			order.setCurrency(line[4]);
-			order.setQuantity(Double.parseDouble(line[7]));
+			order.setQuantity(Integer.parseInt(line[7]));
 			order.setDate(sdf.parse(line[6]));
-			order.setPrice(Double.parseDouble(line[8]));
+			order.setPrice(new BigDecimal(line[8]));
 			
 			String hashId = order.calculateId();
 			order.setExternalId(hashId);

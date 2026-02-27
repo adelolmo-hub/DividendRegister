@@ -1,5 +1,6 @@
 package app.dividends.domain.model;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import lombok.Getter;
@@ -10,13 +11,13 @@ public class Position {
 
 	String ticker;
 	int quantity;
-	double averageCost;
-	double currentValue;
-	double totalValue;
+	BigDecimal averageCost;
+	BigDecimal currentValue;
+	BigDecimal totalValue;
 	double profit;
 	List<Dividend> dividendsRecieved;
 	
-	public Position(String ticker, int quantity, double averageCost, List<Dividend> dividendsRecieved) {
+	public Position(String ticker, int quantity, BigDecimal averageCost, List<Dividend> dividendsRecieved) {
 		super();
 		this.ticker = ticker;
 		this.quantity = quantity;
