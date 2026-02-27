@@ -19,8 +19,8 @@ import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 
-import app.dividends.application.ports.input.FileImportUseCase;
-import app.dividends.domain.model.Dividend;
+import app.dividends.application.ports.input.IFileImportUseCase;
+import app.dividends.domain.model.DividendTransaction;
 import app.dividends.domain.model.ImportReport;
 import app.dividends.domain.model.ImportReport.LineError;
 import app.dividends.domain.model.Order;
@@ -32,7 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
-public class FileImportService implements FileImportUseCase{
+public class FileImportService implements IFileImportUseCase{
 
 	@Autowired
 	private TransactionRepository repo;
@@ -86,11 +86,11 @@ public class FileImportService implements FileImportUseCase{
 		return new ImportReport(totalProcessedLines, failedLines, errors);	
 	}
 	
-	public Dividend extractDividendValues(String[] line) throws NoSuchAlgorithmException {
+	public DividendTransaction extractDividendValues(String[] line) throws NoSuchAlgorithmException {
 		ExtractionResult result = dataExtractor.extractDataFromCsv(line[4], line[2]);
-		Dividend dividend = null;
+		DividendTransaction dividend = null;
 		if(result != null) {
-			dividend = new Dividend();
+			dividend = new DividendTransaction();
 			dividend.setTicker(result.ticker());
 			dividend.setCurrency(line[2]);
 			dividend.setQuantity(Double.parseDouble(line[5]));

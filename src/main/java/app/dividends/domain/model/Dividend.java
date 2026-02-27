@@ -1,10 +1,17 @@
 package app.dividends.domain.model;
 
-import jakarta.persistence.DiscriminatorValue;
-import jakarta.persistence.Entity;
 
-@Entity
-@DiscriminatorValue("Dividend")
-public class Dividend extends Transaction{
-	private double taxAmount;
+import java.util.Date;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter @Setter
+public class Dividend {
+
+	Date date;
+	String currency;
+	double quantityPerAsset;
+	double totalRecieved;
+	
 }
