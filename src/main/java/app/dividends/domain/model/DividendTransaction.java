@@ -8,9 +8,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@DiscriminatorValue("Order")
+@DiscriminatorValue("Dividend")
 @Getter @Setter
-public class Order extends Transaction{
-	private BigDecimal commission;
-	int quantity;
+public class DividendTransaction extends Transaction{
+	private BigDecimal taxAmount;
+	private BigDecimal amountReceived;
 }

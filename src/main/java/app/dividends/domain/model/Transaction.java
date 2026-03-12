@@ -1,5 +1,6 @@
 package app.dividends.domain.model;
 
+import java.math.BigDecimal;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 
@@ -32,12 +33,11 @@ public class Transaction {
 	
 	String ticker;
 	String currency;
-	Double quantity;
-	Double price;
+	BigDecimal price;
 	Date date;
 	
 	public String calculateId() throws NoSuchAlgorithmException {
-		String raw = String.format("%s|%s|%s|%f", date, ticker, quantity, price);
+		String raw = String.format("%s|%s|%f", date, ticker, price);
 		return HashUtils.hashSHA256(raw);
 	}
 
@@ -49,19 +49,11 @@ public class Transaction {
 		this.ticker = ticker;
 	}
 
-	public Double getQuantity() {
-		return quantity;
-	}
-
-	public void setQuantity(Double quantity) {
-		this.quantity = quantity;
-	}
-
-	public Double getPrice() {
+	public BigDecimal getPrice() {
 		return price;
 	}
 
-	public void setPrice(Double price) {
+	public void setPrice(BigDecimal price) {
 		this.price = price;
 	}
 
@@ -88,8 +80,4 @@ public class Transaction {
 	public void setCurrency(String currency) {
 		this.currency = currency;
 	}
-
-	
-	
-	
 }

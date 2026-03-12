@@ -3,6 +3,7 @@ package app.dividends.application.service;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.math.BigDecimal;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Date;
 import java.text.ParseException;
@@ -19,8 +20,8 @@ import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 
-import app.dividends.application.ports.input.FileImportUseCase;
-import app.dividends.domain.model.Dividend;
+import app.dividends.application.ports.input.IFileImportUseCase;
+import app.dividends.domain.model.DividendTransaction;
 import app.dividends.domain.model.ImportReport;
 import app.dividends.domain.model.ImportReport.LineError;
 import app.dividends.domain.model.Order;
@@ -32,7 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
-public class FileImportService implements FileImportUseCase{
+public class FileImportService implements IFileImportUseCase{
 
 	@Autowired
 	private TransactionRepository repo;
@@ -86,18 +87,18 @@ public class FileImportService implements FileImportUseCase{
 		return new ImportReport(totalProcessedLines, failedLines, errors);	
 	}
 	
-	public Dividend extractDividendValues(String[] line) throws NoSuchAlgorithmException {
+	public DividendTransaction extractDividendValues(String[] line) throws NoSuchAlgorithmException {
 		ExtractionResult result = dataExtractor.extractDataFromCsv(line[4], line[2]);
-		Dividend dividend = null;
+		DividendTransaction dividend = null;
 		if(result != null) {
-			dividend = new Dividend();
+			dividend = new DividendTransaction();
 			dividend.setTicker(result.ticker());
 			dividend.setCurrency(line[2]);
-			dividend.setQuantity(Double.parseDouble(line[5]));
+			dividend.setAmountReceived(new BigDecimal(line[5]));
 			dividend.setDate(Date.valueOf(line[3]));
 			
 			if(result.price() != null){
-				dividend.setPrice(Double.parseDouble(result.price()));
+				dividend.setPrice(new BigDecimal(result.price()));
 			}
 			String hashId = dividend.calculateId();
 			dividend.setExternalId(hashId);
@@ -111,9 +112,9 @@ public class FileImportService implements FileImportUseCase{
 		try {
 			order.setTicker(line[5]);
 			order.setCurrency(line[4]);
-			order.setQuantity(Double.parseDouble(line[7]));
+			order.setQuantity(Integer.parseInt(line[7]));
 			order.setDate(sdf.parse(line[6]));
-			order.setPrice(Double.parseDouble(line[8]));
+			order.setPrice(new BigDecimal(line[8]));
 			
 			String hashId = order.calculateId();
 			order.setExternalId(hashId);
