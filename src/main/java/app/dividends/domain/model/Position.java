@@ -4,10 +4,13 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter @Setter
+@JsonPropertyOrder({"ticker", "quantity", "currentValue", "averageCost", "totalValue", "profit", "totalProfit", "totalProfitWithDividends", "dividendsRecieved"})
 public class Position {
 
 	private String ticker;
@@ -15,40 +18,45 @@ public class Position {
 	
 	private BigDecimal averageCost;
 	private BigDecimal currentValue;
-	private BigDecimal totalValue;
-	private BigDecimal profit;
+	private BigDecimal currentValueEUR;
+	private BigDecimal totalValue; //no deberia estar en dolares
+	private BigDecimal profit; //porcentaje con mucho decimal
 	private BigDecimal totalProfit;
 	private BigDecimal totalProfitWithDividends;
 	
-	private List<Dividend> dividendsRecieved;
+	private List<Dividend> dividendsRecieved; //mucho decimal
 	
-	public Position(String ticker, int quantity, BigDecimal averageCost, List<Dividend> dividendsRecieved, BigDecimal currentValue) {
+	public Position(String ticker, int quantity, BigDecimal averageCost, List<Dividend> dividendsRecieved, BigDecimal currentValue, BigDecimal currenValueEUR) {
 		super();
 		this.ticker = ticker;
 		this.quantity = quantity;
 		this.averageCost = averageCost;
 		this.dividendsRecieved = dividendsRecieved;
 		this.currentValue = currentValue;
+		this.currentValueEUR = currenValueEUR;
 		calculateDerivedFields();
 	}
 	
 	private void calculateDerivedFields() {
 		
 		BigDecimal totalDividends = dividendsRecieved.stream()
-                .map(Dividend::getTotalRecieved)
+                .map(Dividend::getTotalRecievedInEur)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 		
 		if(currentValue.compareTo(BigDecimal.ZERO) != 0 && quantity > 0 /*&& averageCost.compareTo(BigDecimal.ZERO) != 0*/) {
-			this.totalValue = currentValue.multiply(BigDecimal.valueOf(quantity));
+			this.totalValue = currentValueEUR.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_EVEN);
 			
-             this.profit = currentValue.subtract(averageCost)
+             this.profit = currentValueEUR.subtract(averageCost)
                    .divide(averageCost, 4, RoundingMode.HALF_EVEN)
-                   .multiply(new BigDecimal("100")); 
+                   .multiply(new BigDecimal("100"))
+                   .setScale(2, RoundingMode.HALF_EVEN); 
             
-            this.totalProfit = currentValue.subtract(averageCost)
-                    .multiply(BigDecimal.valueOf(quantity));
+            this.totalProfit = currentValueEUR.subtract(averageCost)
+                    .multiply(BigDecimal.valueOf(quantity))
+                    .setScale(2, RoundingMode.HALF_EVEN);
             
-            this.totalProfitWithDividends = totalProfit.add(totalDividends);
+            this.totalProfitWithDividends = totalProfit.add(totalDividends)
+            		.setScale(2, RoundingMode.HALF_EVEN);
 		}
 	}
 	

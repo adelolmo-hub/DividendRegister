@@ -13,6 +13,6 @@ public class Dividend {
 	Date date;
 	String currency;
 	BigDecimal quantityPerAsset;
-	BigDecimal totalRecieved;
+	BigDecimal totalRecievedInEur;
 	
 }

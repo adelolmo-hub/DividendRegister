@@ -42,7 +42,6 @@ public class PortfolioService implements IPortfolioService{
 		Map<String, List<Transaction>> groupedByTicker = allTransactions.stream()
 				.collect(Collectors.groupingBy(Transaction::getTicker));
 		
-		//No se crea entrada para mondi
 		List<Position> list =  groupedByTicker.entrySet().stream()
 	            .map(entry -> calculatePosition(entry.getKey(), entry.getValue()))
 	            .filter(pos -> pos.getQuantity() > 0)
@@ -55,6 +54,8 @@ public class PortfolioService implements IPortfolioService{
 		int absoluteQuantity = 0;
 		BigDecimal totalCost = new BigDecimal("0");
 		BigDecimal currentValue = new BigDecimal("0");
+		BigDecimal currentValueEUR = new BigDecimal("0");
+		BigDecimal exchangeRate = marketDataService.getExchangeRate(transactions.get(0).getCurrency());
 		
 		List<Dividend> dividends = new LinkedList<>();
 		
@@ -64,7 +65,7 @@ public class PortfolioService implements IPortfolioService{
 					//Compra
 					quantity += order.getQuantity();
 					absoluteQuantity += order.getQuantity();
-					totalCost = totalCost.add(order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity())));
+					totalCost = totalCost.add(order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity())).multiply(exchangeRate));
 				}else { 
 					//Venta
 					quantity += order.getQuantity();
@@ -75,24 +76,28 @@ public class PortfolioService implements IPortfolioService{
 				d.setDate(divTx.getDate());
 				d.setCurrency(divTx.getCurrency());
 				d.setQuantityPerAsset(Objects.requireNonNullElse(divTx.getPrice(), BigDecimal.ZERO));
-				d.setTotalRecieved(divTx.getAmountReceived());
+				d.setTotalRecievedInEur(divTx.getAmountReceived().multiply(exchangeRate));
 				dividends.add(d);
 			}
 		}
 		TickerInformation tickerInfo;
 		String fullTickerString;
+		
 		if((tickerInfo = tickerRepository.findByTicker(ticker)) != null) {
 			fullTickerString = tickerInfo.getTicker() + Optional.ofNullable(tickerInfo.getSufix()).orElse("");
 		}else {
 			fullTickerString = ticker;
 		}
 		currentValue = marketDataService.getCurrentAssetValue(fullTickerString);
-		
+		currentValueEUR = currentValue.multiply(exchangeRate);
+		if(transactions.get(0).getCurrency().equals("GBP")) {
+			currentValueEUR = currentValueEUR.movePointLeft(2);
+		}
 		BigDecimal averageCost = new BigDecimal("0");
 		if (absoluteQuantity != 0) {
 			averageCost = totalCost.divide(BigDecimal.valueOf(absoluteQuantity), 2, RoundingMode.HALF_EVEN);
 		}
-		return new Position(ticker, quantity, averageCost, dividends, currentValue);
+		return new Position(ticker, quantity, averageCost, dividends, currentValue, currentValueEUR);
 	}
 	
 	

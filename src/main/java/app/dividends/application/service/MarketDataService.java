@@ -1,28 +1,22 @@
 package app.dividends.application.service;
 
 import java.math.BigDecimal;
-
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import app.dividends.application.ports.input.IMarketDataService;
-import app.dividends.domain.model.AlphaVantageQuoteResponse;
+import app.dividends.domain.model.YahooResponse;
 
 @Service
 public class MarketDataService implements IMarketDataService{
 	
-	private final RestTemplate restTemplate;
-	
-	@Value("${alphavantage.api.key}")
-    private String apiKey;
+	private final RestClient restClient;
 
-    private static final String URL = "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={apikey}";
+    private static final String URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}";
     
-    public MarketDataService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    public MarketDataService(RestClient restClient) {
+        this.restClient = restClient;
     }
     
 	@Override
@@ -30,26 +24,41 @@ public class MarketDataService implements IMarketDataService{
 	public BigDecimal getCurrentAssetValue(String ticker){
 		try {
 			
-            ResponseEntity<AlphaVantageQuoteResponse> response = restTemplate.getForEntity(
-                URL, AlphaVantageQuoteResponse.class, ticker, apiKey);
-            Thread.sleep(1000);
-
-            if (response.getBody() != null && response.getBody().getGlobalQuote() != null) {
-                String priceStr = response.getBody().getGlobalQuote().getPrice();
-                return new BigDecimal(priceStr);
+            YahooResponse response = restClient.get()
+            .uri(URL, ticker)
+            .header("User-Agent", "Mozilla/5.0")
+            .retrieve()
+            .body(YahooResponse.class);
+            
+            if(response.getChart() != null) {
+            	return new BigDecimal(response.getChart().getResult().get(0).getMeta().getRegularMarketPrice());
             }
-            throw new RuntimeException("Precio no encontrado para " + ticker);
+            return BigDecimal.ZERO;
             
         } catch (Exception e) {
-            return BigDecimal.ZERO;
+        	return BigDecimal.ZERO;
         }
     }
 
 	@Override
+	@Cacheable(value = "exchangeRates", key = "#currency")
 	public BigDecimal getExchangeRate(String currency) {
-		BigDecimal price;
+		if(currency.equals("EUR")) {return BigDecimal.ONE;}
+		String symbol = currency + "EUR=X";
 		
-		return null;
+		try {
+			YahooResponse response = restClient.get()
+		            .uri(URL, symbol)
+		            .header("User-Agent", "Mozilla/5.0")
+		            .retrieve()
+		            .body(YahooResponse.class);
+			if(response.getChart() != null) {
+				return new BigDecimal(response.getChart().getResult().get(0).getMeta().getRegularMarketPrice());
+            }
+            return BigDecimal.ZERO;
+        } catch (Exception e) {
+        	return BigDecimal.ZERO;
+        }
 	}
 
 }
