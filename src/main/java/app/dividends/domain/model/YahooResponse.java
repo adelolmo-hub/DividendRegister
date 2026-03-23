@@ -27,5 +27,6 @@ public class YahooResponse {
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class Meta {
 	    private String regularMarketPrice;
+	    private String currency;
 	}
 }

@@ -7,6 +7,7 @@ import org.springframework.web.client.RestClient;
 
 import app.dividends.application.ports.input.IMarketDataService;
 import app.dividends.domain.model.YahooResponse;
+import app.dividends.domain.model.YahooResponse.Meta;
 
 @Service
 public class MarketDataService implements IMarketDataService{
@@ -31,7 +32,12 @@ public class MarketDataService implements IMarketDataService{
             .body(YahooResponse.class);
             
             if(response.getChart() != null) {
-            	return new BigDecimal(response.getChart().getResult().get(0).getMeta().getRegularMarketPrice());
+            	Meta meta = response.getChart().getResult().get(0).getMeta();
+            	if(meta.getCurrency().equals("GBp")) {
+            		return new BigDecimal(meta.getRegularMarketPrice()).movePointLeft(2);
+            	}else {
+            		return new BigDecimal(meta.getRegularMarketPrice());
+            	}
             }
             return BigDecimal.ZERO;
             

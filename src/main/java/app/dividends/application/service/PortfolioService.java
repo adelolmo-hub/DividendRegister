@@ -2,13 +2,15 @@ package app.dividends.application.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.LinkedList;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.hibernate.transform.ToListResultTransformer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,9 +19,12 @@ import app.dividends.application.ports.input.IPortfolioService;
 import app.dividends.domain.model.Dividend;
 import app.dividends.domain.model.DividendTransaction;
 import app.dividends.domain.model.Order;
+import app.dividends.domain.model.PortfolioDTO;
+import app.dividends.domain.model.PortfolioSnapshot;
 import app.dividends.domain.model.Position;
 import app.dividends.domain.model.TickerInformation;
 import app.dividends.domain.model.Transaction;
+import app.dividends.infrastructure.persistence.PortfolioSnapshotRepository;
 import app.dividends.infrastructure.persistence.TickerInformationRepository;
 import app.dividends.infrastructure.persistence.TransactionRepository;
 
@@ -27,79 +32,173 @@ import app.dividends.infrastructure.persistence.TransactionRepository;
 public class PortfolioService implements IPortfolioService{
 	
 	@Autowired
-	private TransactionRepository repo;
+	private TransactionRepository transactionRepo;
+	@Autowired
+	private PortfolioSnapshotRepository snapshotRepository;
 	
 	@Autowired
 	private IMarketDataService marketDataService;
 	@Autowired
 	private TickerInformationRepository tickerRepository;
+	
+	public void updatePortfolioStorage(List<Position> positions) {
+		for(Position position : positions) {
+			PortfolioSnapshot snapshot = new PortfolioSnapshot();
+			snapshot.setTicker(position.getTicker());
+			snapshot.setQuantity(position.getQuantity());
+			snapshot.setAverageCost(position.getAverageCost());
+			snapshot.setCurrentValue(position.getCurrentValue());
+			snapshot.setCurrentValueEUR(position.getCurrentValueEUR());
+			snapshot.setTotalValue(position.getTotalValue());
+			snapshot.setProfit(position.getProfit());
+			snapshot.setTotalProfit(position.getTotalProfit());
+			snapshot.setTotalProfitWithDividends(position.getTotalProfitWithDividends());
+			snapshot.setLastUpdate(LocalDateTime.now());
+			
+			snapshotRepository.save(snapshot);
+		}
+	}
 
-	@Override
-	public List<Position> calculatePortfolio() {
+	private List<Position> getAllPositions() {
+		List<Position> list;
 		
-		List<Transaction> allTransactions = repo.findAllByOrderByDateAsc();
+		LocalDateTime lastUpdate= snapshotRepository.findTopByOrderByLastUpdateDesc()
+				.map(PortfolioSnapshot::getLastUpdate)
+				.orElse(LocalDateTime.MIN);
 		
-		Map<String, List<Transaction>> groupedByTicker = allTransactions.stream()
-				.collect(Collectors.groupingBy(Transaction::getTicker));
+		if(lastUpdate.isBefore(LocalDateTime.now().minusDays(7))){
+			List<Transaction> allTransactions = transactionRepo.findAllByOrderByDateAsc();
+			
+			Map<String, List<Transaction>> groupedByTicker = allTransactions.stream()
+					.collect(Collectors.groupingBy(Transaction::getTicker));
+			
+			list =  groupedByTicker.entrySet().stream()
+		            .map(entry -> calculatePosition(entry.getKey(), entry.getValue()))
+		            //.filter(pos -> pos.getQuantity() > 0)
+		            .toList();
+			
+			updatePortfolioStorage(list);
+		}else {
+			list = snapshotRepository.findAll().stream()
+					.map(snap -> new Position(
+							snap.getTicker(),
+							snap.getQuantity(),
+							snap.getAverageCost(),
+							getDividends(snap.getTicker()),
+							snap.getCurrentValue(),
+							snap.getCurrentValueEUR()
+							)).toList();
+		}
 		
-		List<Position> list =  groupedByTicker.entrySet().stream()
-	            .map(entry -> calculatePosition(entry.getKey(), entry.getValue()))
-	            .filter(pos -> pos.getQuantity() > 0)
-	            .toList();
 		return list;
 	}
 
 	private Position calculatePosition(String ticker, List<Transaction> transactions) {
-		int quantity = 0;
-		int absoluteQuantity = 0;
-		BigDecimal totalCost = new BigDecimal("0");
-		BigDecimal currentValue = new BigDecimal("0");
-		BigDecimal currentValueEUR = new BigDecimal("0");
-		BigDecimal exchangeRate = marketDataService.getExchangeRate(transactions.get(0).getCurrency());
+		if (transactions == null || transactions.isEmpty()) {
+	        return null;
+	    }
+		String currency = transactions.get(0).getCurrency();
+		int currentQuantity = 0;
+	    int totalPurchasedQuantity = 0;
+	    BigDecimal totalCost = BigDecimal.ZERO;
+	    List<Dividend> dividends = new ArrayList<>();
+	    
+	    BigDecimal txExchangeRate = marketDataService.getExchangeRate(currency);
 		
-		List<Dividend> dividends = new LinkedList<>();
+	 // *********************PROCESAR TRANSACCIONES******************************
+	    for (Transaction tx : transactions) {
+
+	        if (tx instanceof Order order) {
+	            if (order.getQuantity() > 0) {
+	                currentQuantity += order.getQuantity();
+	                totalPurchasedQuantity += order.getQuantity();
+	                
+	                BigDecimal orderCost = order.getPrice()
+	                        .multiply(BigDecimal.valueOf(order.getQuantity()))
+	                        .multiply(txExchangeRate);
+	                totalCost = totalCost.add(orderCost);
+	            } else {
+	                // Venta
+	                currentQuantity += order.getQuantity();
+	            }
+	        } else if (tx instanceof DividendTransaction divTx) {
+	            dividends.add(mapToDividend(divTx, txExchangeRate));
+	        }
+	    }
+	    
+	    // **********************OBTENER INFORMACION DEL MERCADO*****************************
+		String fullTickerString = fullTickerString(ticker);
+		BigDecimal currentValue = marketDataService.getCurrentAssetValue(fullTickerString);
 		
-		for(Transaction tx : transactions) {
-			if(tx instanceof Order order) {
-				if(order.getQuantity() > 0){ 
-					//Compra
-					quantity += order.getQuantity();
-					absoluteQuantity += order.getQuantity();
-					totalCost = totalCost.add(order.getPrice().multiply(BigDecimal.valueOf(order.getQuantity())).multiply(exchangeRate));
-				}else { 
-					//Venta
-					quantity += order.getQuantity();
-				}
-			}else if(tx instanceof DividendTransaction divTx){
-				//Dividendo
-				Dividend d = new Dividend();
-				d.setDate(divTx.getDate());
-				d.setCurrency(divTx.getCurrency());
-				d.setQuantityPerAsset(Objects.requireNonNullElse(divTx.getPrice(), BigDecimal.ZERO));
-				d.setTotalRecievedInEur(divTx.getAmountReceived().multiply(exchangeRate));
-				dividends.add(d);
-			}
-		}
-		TickerInformation tickerInfo;
-		String fullTickerString;
+		//**************Normalizacion de moneda**************************
+		BigDecimal currentValueEUR = currentValue.multiply(txExchangeRate);
 		
-		if((tickerInfo = tickerRepository.findByTicker(ticker)) != null) {
-			fullTickerString = tickerInfo.getTicker() + Optional.ofNullable(tickerInfo.getSufix()).orElse("");
-		}else {
-			fullTickerString = ticker;
-		}
-		currentValue = marketDataService.getCurrentAssetValue(fullTickerString);
-		currentValueEUR = currentValue.multiply(exchangeRate);
-		if(transactions.get(0).getCurrency().equals("GBP")) {
-			currentValueEUR = currentValueEUR.movePointLeft(2);
-		}
+		//************************Calculo de promedio**********************
 		BigDecimal averageCost = new BigDecimal("0");
-		if (absoluteQuantity != 0) {
-			averageCost = totalCost.divide(BigDecimal.valueOf(absoluteQuantity), 2, RoundingMode.HALF_EVEN);
+		if (totalPurchasedQuantity != 0) {
+			averageCost = totalCost.divide(BigDecimal.valueOf(totalPurchasedQuantity), 2, RoundingMode.HALF_EVEN);
 		}
-		return new Position(ticker, quantity, averageCost, dividends, currentValue, currentValueEUR);
+		return new Position(ticker, currentQuantity, averageCost, dividends, currentValue, currentValueEUR);
 	}
 	
+	private Dividend mapToDividend(DividendTransaction divTx, BigDecimal exchangeRate) {
+	    Dividend d = new Dividend();
+	    d.setDate(divTx.getDate());
+	    d.setCurrency(divTx.getCurrency());
+	    d.setQuantityPerAsset(Objects.requireNonNullElse(divTx.getPrice(), BigDecimal.ZERO));
+	    d.setTotalRecievedInEur(divTx.getAmountReceived().multiply(exchangeRate));
+	    return d;
+	}
 	
+	private String fullTickerString(String ticker) {
+		TickerInformation tickerInfo;
+		if((tickerInfo = tickerRepository.findByTicker(ticker)) != null) {
+			return tickerInfo.getTicker() + Optional.ofNullable(
+					tickerInfo.getSufix()).orElse("");
+		}else {
+			return ticker;
+		}
+	}
 	
+	private List<Dividend> getDividends(String ticker){
+		List<Dividend> dividends = new ArrayList<>();
+		List<DividendTransaction> transactions = transactionRepo.findAllByTicker(ticker);
+		if(transactions.size() == 0) {
+			return dividends;
+		}
+		
+		BigDecimal exchangeRate = marketDataService.getExchangeRate(transactions.get(0).getCurrency());
+		for(DividendTransaction tx : transactions) {
+			dividends.add(mapToDividend(tx, exchangeRate));
+		}
+		return dividends;
+	}
+	
+	@Override
+	public PortfolioDTO calculatePortfolio() {
+		List<Position> positions = getAllPositions();
+		BigDecimal totalDividends = BigDecimal.ZERO;
+		BigDecimal totalValue = BigDecimal.ZERO;
+		BigDecimal totalCost = BigDecimal.ZERO;
+		BigDecimal totalValueWithDividends;
+		BigDecimal totalProfit;
+		BigDecimal totalProfitWithDividends;
+
+		for (Position p : positions) {
+		    totalDividends = totalDividends.add(p.getTotalDividends());
+		    totalValue = totalValue.add(p.getCurrentValueEUR().multiply(BigDecimal.valueOf(p.getQuantity())));
+		    totalCost = totalCost.add(p.getAverageCost().multiply(BigDecimal.valueOf(p.getQuantity())));
+		    		;
+		}
+		totalValueWithDividends = totalValue.add(totalDividends);
+		totalProfit = totalValue.subtract(totalCost)
+				.divide(totalCost, RoundingMode.HALF_EVEN)
+				.multiply(new BigDecimal("100"))
+				.setScale(2, RoundingMode.HALF_EVEN);
+		totalProfitWithDividends = totalValueWithDividends.subtract(totalCost)
+				.divide(totalCost, RoundingMode.HALF_EVEN)
+				.multiply(new BigDecimal("100"))
+				.setScale(2, RoundingMode.HALF_EVEN);
+		return new PortfolioDTO(positions, totalValue, totalValueWithDividends, totalProfit, totalProfitWithDividends, totalDividends);
+	}
 }
