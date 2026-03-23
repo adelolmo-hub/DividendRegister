@@ -1,7 +1,5 @@
 package app.dividends.infrastructure.input.rest;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import app.dividends.application.ports.input.IFileImportUseCase;
 import app.dividends.application.ports.input.IPortfolioService;
 import app.dividends.domain.model.ImportReport;
-import app.dividends.domain.model.Position;
+import app.dividends.domain.model.PortfolioDTO;
 
 @RestController
 @RequestMapping("/api")
@@ -36,7 +34,7 @@ public class TransactionController {
 	}
 	
 	@GetMapping("/positions")
-	public ResponseEntity<List<Position>> getPositions() {
-		return new ResponseEntity<List<Position>>(portfolioService.calculatePortfolio(), HttpStatus.OK);
+	public ResponseEntity<PortfolioDTO> getPositions() {
+		return new ResponseEntity<PortfolioDTO>(portfolioService.calculatePortfolio(), HttpStatus.OK);
 	}
 }
