@@ -10,7 +10,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.hibernate.transform.ToListResultTransformer;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -41,24 +41,35 @@ public class PortfolioService implements IPortfolioService{
 	@Autowired
 	private TickerInformationRepository tickerRepository;
 	
-	public void updatePortfolioStorage(List<Position> positions) {
-		for(Position position : positions) {
-			PortfolioSnapshot snapshot = new PortfolioSnapshot();
-			snapshot.setTicker(position.getTicker());
-			snapshot.setQuantity(position.getQuantity());
-			snapshot.setAverageCost(position.getAverageCost());
-			snapshot.setCurrentValue(position.getCurrentValue());
-			snapshot.setCurrentValueEUR(position.getCurrentValueEUR());
-			snapshot.setTotalValue(position.getTotalValue());
-			snapshot.setProfit(position.getProfit());
-			snapshot.setTotalProfit(position.getTotalProfit());
-			snapshot.setTotalProfitWithDividends(position.getTotalProfitWithDividends());
-			snapshot.setLastUpdate(LocalDateTime.now());
-			
-			snapshotRepository.save(snapshot);
-		}
-	}
+	@Override
+	public PortfolioDTO calculatePortfolio() {
+		List<Position> positions = getAllPositions();
+		BigDecimal totalDividends = BigDecimal.ZERO;
+		BigDecimal totalValue = BigDecimal.ZERO;
+		BigDecimal totalCost = BigDecimal.ZERO;
+		BigDecimal totalValueWithDividends;
+		BigDecimal totalProfit;
+		BigDecimal totalProfitWithDividends;
 
+ 		for (Position p : positions) {
+		    totalDividends = totalDividends.add(p.getTotalDividends());
+		    totalValue = totalValue.add(p.getCurrentValueEUR().multiply(BigDecimal.valueOf(p.getQuantity())));
+		    totalCost = totalCost.add(p.getAverageCost().multiply(BigDecimal.valueOf(p.getQuantity())));
+		}
+		totalValueWithDividends = totalValue.add(totalDividends);
+		
+		totalProfit = totalValue.subtract(totalCost)
+				.divide(totalCost, RoundingMode.HALF_EVEN)
+				.multiply(new BigDecimal("100"))
+				.setScale(2, RoundingMode.HALF_EVEN);
+		
+		totalProfitWithDividends = totalValueWithDividends.subtract(totalCost)
+				.divide(totalCost, RoundingMode.HALF_EVEN)
+				.multiply(new BigDecimal("100"))
+				.setScale(2, RoundingMode.HALF_EVEN);
+		return new PortfolioDTO(positions, totalValue, totalValueWithDividends, totalProfit, totalProfitWithDividends, totalDividends);
+	}
+	
 	private List<Position> getAllPositions() {
 		List<Position> list;
 		
@@ -74,12 +85,11 @@ public class PortfolioService implements IPortfolioService{
 			
 			list =  groupedByTicker.entrySet().stream()
 		            .map(entry -> calculatePosition(entry.getKey(), entry.getValue()))
-		            //.filter(pos -> pos.getQuantity() > 0)
 		            .toList();
 			
 			updatePortfolioStorage(list);
 		}else {
-			list = snapshotRepository.findAll().stream()
+			list = snapshotRepository.findLastValueStored().stream()
 					.map(snap -> new Position(
 							snap.getTicker(),
 							snap.getQuantity(),
@@ -92,7 +102,7 @@ public class PortfolioService implements IPortfolioService{
 		
 		return list;
 	}
-
+	
 	private Position calculatePosition(String ticker, List<Transaction> transactions) {
 		if (transactions == null || transactions.isEmpty()) {
 	        return null;
@@ -130,15 +140,34 @@ public class PortfolioService implements IPortfolioService{
 		String fullTickerString = fullTickerString(ticker);
 		BigDecimal currentValue = marketDataService.getCurrentAssetValue(fullTickerString);
 		
-		//**************Normalizacion de moneda**************************
+		// **************Normalizacion de moneda**************************
 		BigDecimal currentValueEUR = currentValue.multiply(txExchangeRate);
 		
-		//************************Calculo de promedio**********************
+		// ************************Calculo de promedio**********************
 		BigDecimal averageCost = new BigDecimal("0");
 		if (totalPurchasedQuantity != 0) {
 			averageCost = totalCost.divide(BigDecimal.valueOf(totalPurchasedQuantity), 2, RoundingMode.HALF_EVEN);
 		}
 		return new Position(ticker, currentQuantity, averageCost, dividends, currentValue, currentValueEUR);
+	}
+	
+	
+	public void updatePortfolioStorage(List<Position> positions) {
+		for(Position position : positions) {
+			PortfolioSnapshot snapshot = new PortfolioSnapshot();
+			snapshot.setTicker(position.getTicker());
+			snapshot.setQuantity(position.getQuantity());
+			snapshot.setAverageCost(position.getAverageCost());
+			snapshot.setCurrentValue(position.getCurrentValue());
+			snapshot.setCurrentValueEUR(position.getCurrentValueEUR());
+			snapshot.setTotalValue(position.getTotalValue());
+			snapshot.setProfit(position.getProfit());
+			snapshot.setTotalProfit(position.getTotalProfit());
+			snapshot.setTotalProfitWithDividends(position.getTotalProfitWithDividends());
+			snapshot.setLastUpdate(LocalDateTime.now());
+			
+			snapshotRepository.save(snapshot);
+		}
 	}
 	
 	private Dividend mapToDividend(DividendTransaction divTx, BigDecimal exchangeRate) {
@@ -174,31 +203,5 @@ public class PortfolioService implements IPortfolioService{
 		return dividends;
 	}
 	
-	@Override
-	public PortfolioDTO calculatePortfolio() {
-		List<Position> positions = getAllPositions();
-		BigDecimal totalDividends = BigDecimal.ZERO;
-		BigDecimal totalValue = BigDecimal.ZERO;
-		BigDecimal totalCost = BigDecimal.ZERO;
-		BigDecimal totalValueWithDividends;
-		BigDecimal totalProfit;
-		BigDecimal totalProfitWithDividends;
-
-		for (Position p : positions) {
-		    totalDividends = totalDividends.add(p.getTotalDividends());
-		    totalValue = totalValue.add(p.getCurrentValueEUR().multiply(BigDecimal.valueOf(p.getQuantity())));
-		    totalCost = totalCost.add(p.getAverageCost().multiply(BigDecimal.valueOf(p.getQuantity())));
-		    		;
-		}
-		totalValueWithDividends = totalValue.add(totalDividends);
-		totalProfit = totalValue.subtract(totalCost)
-				.divide(totalCost, RoundingMode.HALF_EVEN)
-				.multiply(new BigDecimal("100"))
-				.setScale(2, RoundingMode.HALF_EVEN);
-		totalProfitWithDividends = totalValueWithDividends.subtract(totalCost)
-				.divide(totalCost, RoundingMode.HALF_EVEN)
-				.multiply(new BigDecimal("100"))
-				.setScale(2, RoundingMode.HALF_EVEN);
-		return new PortfolioDTO(positions, totalValue, totalValueWithDividends, totalProfit, totalProfitWithDividends, totalDividends);
-	}
+	
 }
