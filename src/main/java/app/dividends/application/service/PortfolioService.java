@@ -127,6 +127,7 @@ public class PortfolioService implements IPortfolioService{
 	                        .multiply(BigDecimal.valueOf(order.getQuantity()))
 	                        .multiply(txExchangeRate);
 	                totalCost = totalCost.add(orderCost);
+	                totalCost = totalCost.subtract(order.getCommission());
 	            } else {
 	                // Venta
 	                currentQuantity += order.getQuantity();
