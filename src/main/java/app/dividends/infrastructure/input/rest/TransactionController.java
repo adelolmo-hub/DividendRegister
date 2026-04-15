@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import app.dividends.application.ports.input.IExcelWriterService;
 import app.dividends.application.ports.input.IFileImportUseCase;
 import app.dividends.application.ports.input.IPortfolioService;
 import app.dividends.domain.model.ImportReport;
@@ -25,6 +26,9 @@ public class TransactionController {
 	@Autowired
 	IPortfolioService portfolioService;
 	
+	@Autowired
+	IExcelWriterService excelService;
+	
 	@PostMapping("/uploadFile")
 	public ResponseEntity<ImportReport> uploadFile(
 			@RequestParam("file") MultipartFile file,
@@ -36,5 +40,10 @@ public class TransactionController {
 	@GetMapping("/positions")
 	public ResponseEntity<PortfolioDTO> getPositions() {
 		return new ResponseEntity<PortfolioDTO>(portfolioService.calculatePortfolio(), HttpStatus.OK);
+	}
+	
+	@GetMapping("/getExcel")
+	public String getExcel() {
+		return excelService.writePortfolio();
 	}
 }
