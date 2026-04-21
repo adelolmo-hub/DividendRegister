@@ -6,8 +6,13 @@ import java.io.Reader;
 import java.math.BigDecimal;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoField;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -21,6 +26,7 @@ import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 
 import app.dividends.application.ports.input.IFileImportUseCase;
+import app.dividends.domain.model.Dividend;
 import app.dividends.domain.model.DividendTransaction;
 import app.dividends.domain.model.ImportReport;
 import app.dividends.domain.model.ImportReport.LineError;
@@ -51,7 +57,6 @@ public class FileImportService implements IFileImportUseCase{
 					.withSeparator(',')
 					.build();
 			CSVReader csvReader = new CSVReaderBuilder(reader)
-					.withSkipLines(1)
 					.withCSVParser(parser)
 					.build();
 			List<String[]> lines = csvReader.readAll();
@@ -59,7 +64,8 @@ public class FileImportService implements IFileImportUseCase{
 			Transaction transaction = null;
 			for(String[] line : lines) {
 				try {
-					if(line[2].matches("^.*Total.*") || line[1].matches("^.*Total.*") || line[1].equals("Header")) {
+					currentLine++;
+					if(line[2].matches("^.*Total.*") || line[1].matches("^.*Total.*") || line[1].equals("Header") || line[3].equals("Fórex")) {
 						continue;
 					}
 					switch(line[0]) {
@@ -69,8 +75,14 @@ public class FileImportService implements IFileImportUseCase{
 					case "Operaciones":
 						transaction = extractOrderValues(line);
 						break;
+					case "Retención de impuestos":
+						transaction = extractDividendTaxes(line);
+						repo.save(transaction);
+						break;
+					default:
+						continue;
 					}
-						
+					
 					if(!repo.existsByExternalId(transaction.getExternalId())) {
 						totalProcessedLines++;
 						repo.save(transaction);
@@ -79,14 +91,21 @@ public class FileImportService implements IFileImportUseCase{
 					failedLines++;
 					errors.add(new LineError(currentLine, String.join(", ", line), e.getMessage()));
 				}
-				currentLine++;
 			}	
 		}catch (Exception e) {
 			log.error(e.getMessage());
 		}
 		return new ImportReport(totalProcessedLines, failedLines, errors);	
 	}
-	
+
+	private Transaction extractDividendTaxes(String[] line) {
+		String ticker = dataExtractor.extractDataFromCsv(line[4], line[2]).ticker();
+		Date date = Date.valueOf(line[3]);
+		DividendTransaction dividendTx = repo.findByTickerAndDate(ticker, date);
+		dividendTx.setTaxAmount(new BigDecimal(line[5]));
+		return dividendTx;
+	}
+
 	public DividendTransaction extractDividendValues(String[] line) throws NoSuchAlgorithmException {
 		ExtractionResult result = dataExtractor.extractDataFromCsv(line[4], line[2]);
 		DividendTransaction dividend = null;
@@ -115,7 +134,7 @@ public class FileImportService implements IFileImportUseCase{
 			order.setQuantity(Integer.parseInt(line[7]));
 			order.setDate(sdf.parse(line[6]));
 			order.setPrice(new BigDecimal(line[8]));
-			
+			order.setCommission(new BigDecimal(line[11]));
 			String hashId = order.calculateId();
 			order.setExternalId(hashId);
 		} catch (NoSuchAlgorithmException e) {
