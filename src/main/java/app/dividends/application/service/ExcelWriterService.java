@@ -4,9 +4,16 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormat;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -40,8 +47,9 @@ public class ExcelWriterService implements IExcelWriterService {
 		Workbook workbook = new XSSFWorkbook();
 		PortfolioDTO portfolio = portfolioService.calculatePortfolio();
 		
+		Map<String, CellStyle> styles = createStyles(workbook);
+		
 		Sheet sheet = workbook.createSheet("Portfolio");
-		sheet.setColumnWidth(0, 12000);
 		Row header = sheet.createRow(HEADER_OFFSET);
 		
 		writeHeader(header);
@@ -53,7 +61,7 @@ public class ExcelWriterService implements IExcelWriterService {
 			for (int j = 0; j < headerValues.length; j++) {
 				Cell cell = row.createCell(j + COLUMN_OFFSET);
 				try {
-					cell.setCellValue(getCellValue(position, headerValues[j]));
+					getCellValue(cell, position, headerValues[j], styles);
 				}catch (Exception e) {
 					cell.setCellValue("null");
 				}
@@ -65,6 +73,7 @@ public class ExcelWriterService implements IExcelWriterService {
 		String fileLocation = path.substring(0, path.length() - 1) + FILE_NAME;
 		
 		try {
+			autoSizeColumns(sheet);
 			FileOutputStream outputStream = new FileOutputStream(fileLocation);
 			workbook.write(outputStream);
 			workbook.close();
@@ -84,35 +93,74 @@ public class ExcelWriterService implements IExcelWriterService {
 		}
 	}
 	
-	private String getCellValue(Position position, String value) {
+	private void getCellValue(Cell cell, Position position, String value, Map<String, CellStyle> styles) {
 		String cellValue = "";
 		switch(value) {
 		case "Ticker":
-			cellValue = position.getTicker();
+			cell.setCellValue(position.getTicker());
 			break;
 		case "Cantidad":
-			cellValue = position.getQuantity() + "";
+			cell.setCellValue(position.getQuantity());
 			break;
 		case "Precio Medio":
-			cellValue = position.getAverageCost().toString();
+			cell.setCellValue(position.getAverageCost().doubleValue());
 			break;
 		case "Dividendos":
-			cellValue = position.getTotalDividends().toString();
+			cell.setCellValue(position.getTotalDividends().doubleValue());
 			break;
 		case "Valor Actual":
-			cellValue = position.getCurrentValue().toString();
+			cell.setCellValue(position.getCurrentValue().doubleValue());
 			break;
 		case "Valor + Dividendos":
-			cellValue = position.getTotalProfitWithDividends().toString();
+			cell.setCellValue(position.getTotalProfitWithDividends().doubleValue());
 			break;
 		case "Rentabilidad":
-			cellValue = position.getProfit().toString();
+			cell.setCellValue(position.getProfit().doubleValue()/100);
+			if(position.getProfit().compareTo(BigDecimal.ZERO) >= 0) {
+				cell.setCellStyle(styles.get("percent_positive"));
+			}else {
+				cell.setCellStyle(styles.get("percent_negative"));
+			}
 			break;
 		case "Rentabilidad + Dividendos":
-			cellValue = position.getTotalProfitWithDividends().toString();
+			cell.setCellValue(position.getTotalProfitWithDividends().doubleValue());
 			break;
 		}
-		return cellValue;
 	}
 	
+	private void autoSizeColumns(Sheet sheet) {
+		for (int i = 0; i < headerValues.length; i++) {
+	        int columnIndex = i + COLUMN_OFFSET;
+	        sheet.autoSizeColumn(columnIndex);
+
+	        int currentWidth = sheet.getColumnWidth(columnIndex);
+	       
+	        int padding = 256 * 3; 
+	        
+	        sheet.setColumnWidth(columnIndex, currentWidth + padding);
+	    }
+	}
+	
+	private Map<String, CellStyle> createStyles(Workbook wb){
+		Map<String, CellStyle> mapStyles = new HashMap<>();
+		
+		//Green Style (positives)
+		CellStyle posPct = wb.createCellStyle();
+		DataFormat dtFormat = wb.createDataFormat();
+		posPct.setDataFormat(dtFormat.getFormat("0.00%"));
+		Font greenFont = wb.createFont();
+		greenFont.setColor(IndexedColors.GREEN.getIndex());
+		posPct.setFont(greenFont);
+		mapStyles.put("percent_positive", posPct);
+		
+		//Red Style (negatives)
+		CellStyle negPct = wb.createCellStyle();
+		negPct.setDataFormat(dtFormat.getFormat("0.00%"));
+		Font redFont = wb.createFont();
+		redFont.setColor(IndexedColors.RED.getIndex());
+		negPct.setFont(redFont);
+		mapStyles.put("percent_negative", negPct);
+		
+		return mapStyles;
+	}
 }
