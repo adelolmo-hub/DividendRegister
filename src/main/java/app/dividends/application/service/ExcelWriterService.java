@@ -105,13 +105,13 @@ public class ExcelWriterService implements IExcelWriterService {
 			cell.setCellValue(position.getQuantity());
 			break;
 		case "Precio Medio":
-			cell.setCellValue(position.getAverageCost().setScale(DECIMAL_PLACES).doubleValue());
+			cell.setCellValue(position.getAverageCost().setScale(DECIMAL_PLACES, RoundingMode.DOWN).doubleValue());
 			break;
 		case "Dividendos":
 			cell.setCellValue(position.getTotalDividends().setScale(DECIMAL_PLACES, RoundingMode.HALF_UP).doubleValue());
 			break;
 		case "Valor Actual":
-			cell.setCellValue(position.getCurrentValue().setScale(DECIMAL_PLACES).doubleValue());
+			cell.setCellValue(position.getCurrentValue().setScale(DECIMAL_PLACES, RoundingMode.DOWN).doubleValue());
 			break;
 		case "Valor + Dividendos":
 			cell.setCellValue(position.getTotalProfitWithDividends().setScale(DECIMAL_PLACES, RoundingMode.HALF_UP).doubleValue());
