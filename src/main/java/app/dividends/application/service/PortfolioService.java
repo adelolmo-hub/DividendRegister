@@ -85,6 +85,7 @@ public class PortfolioService implements IPortfolioService{
 			
 			list =  groupedByTicker.entrySet().stream()
 		            .map(entry -> calculatePosition(entry.getKey(), entry.getValue()))
+		            .filter(position -> position.getQuantity() > 0)
 		            .toList();
 			
 			updatePortfolioStorage(list);
