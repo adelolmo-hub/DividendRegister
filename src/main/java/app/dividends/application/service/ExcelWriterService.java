@@ -37,10 +37,13 @@ public class ExcelWriterService implements IExcelWriterService {
 	
 	private final int DECIMAL_PLACES = 2;
 	
-	private final String[] headerValues = new String[] 
+	private final String[] portfolioHeaderValues = new String[] 
 			{"Ticker","Cantidad","Precio Medio","Dividendos","Valor Actual","Valor + Dividendos","Rentabilidad","Rentabilidad + Dividendos"};
 	
-	private final String FILE_NAME = "temp.xlsx";
+	private final String[] dividendHeaderValues = new String[] 
+			{"Ticker","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "Total", "Yield"};
+	
+	private final String FILE_NAME = "portfolio.xlsx";
 	
 	@Autowired
 	private IPortfolioService portfolioService;
@@ -48,35 +51,23 @@ public class ExcelWriterService implements IExcelWriterService {
 	@Override
 	public String writePortfolio() {
 		Workbook workbook = new XSSFWorkbook();
-		PortfolioDTO portfolio = portfolioService.calculatePortfolio();
+
+		List<Position> positions = portfolioService.calculatePortfolio().getPositions();
 		
 		Map<String, CellStyle> styles = createStyles(workbook);
 		
-		Sheet sheet = workbook.createSheet("Portfolio");
-		Row header = sheet.createRow(HEADER_OFFSET);
+		Sheet portfolioSheet = workbook.createSheet("Portfolio");
+		Sheet dividendSheet = workbook.createSheet("Dividendos");
 		
-		writeHeader(header);
-		
-		List<Position> positions = portfolio.getPositions();
-		for (int i = 0; i < positions.size(); i++) {
-			Position position = positions.get(i);
-			Row row = sheet.createRow(i + ROW_OFFSET);
-			for (int j = 0; j < headerValues.length; j++) {
-				Cell cell = row.createCell(j + COLUMN_OFFSET);
-				try {
-					getCellValue(cell, position, headerValues[j], styles);
-				}catch (Exception e) {
-					cell.setCellValue("null");
-				}
-			}
-		}
+		writePortfolioSheet(positions, styles, portfolioSheet);
 		
 		File currDir = new File(".");
 		String path = currDir.getAbsolutePath();
 		String fileLocation = path.substring(0, path.length() - 1) + FILE_NAME;
 		
 		try {
-			autoSizeColumns(sheet);
+			autoSizeColumns(portfolioSheet);
+			autoSizeColumns(portfolioSheet);
 			FileOutputStream outputStream = new FileOutputStream(fileLocation);
 			workbook.write(outputStream);
 			workbook.close();
@@ -89,7 +80,26 @@ public class ExcelWriterService implements IExcelWriterService {
 		return "Done!";
 	}
 
-	private void writeHeader(Row header) {
+	private void writePortfolioSheet(List<Position> positions, Map<String, CellStyle> styles, Sheet sheet) {
+		Row header = sheet.createRow(HEADER_OFFSET);
+		
+		writeHeader(header, portfolioHeaderValues);
+		
+		for (int i = 0; i < positions.size(); i++) {
+			Position position = positions.get(i);
+			Row row = sheet.createRow(i + ROW_OFFSET);
+			for (int j = 0; j < portfolioHeaderValues.length; j++) {
+				Cell cell = row.createCell(j + COLUMN_OFFSET);
+				try {
+					getCellValue(cell, position, portfolioHeaderValues[j], styles);
+				}catch (Exception e) {
+					cell.setCellValue("null");
+				}
+			}
+		}
+	}
+
+	private void writeHeader(Row header, String[] headerValues) {
 		for (int i = 0; i < headerValues.length; i++) {
 			Cell cell = header.createCell(i + COLUMN_OFFSET);
 			cell.setCellValue(headerValues[i]);
@@ -136,7 +146,7 @@ public class ExcelWriterService implements IExcelWriterService {
 	}
 	
 	private void autoSizeColumns(Sheet sheet) {
-		for (int i = 0; i < headerValues.length; i++) {
+		for (int i = 0; i < portfolioHeaderValues.length; i++) {
 	        int columnIndex = i + COLUMN_OFFSET;
 	        sheet.autoSizeColumn(columnIndex);
 
