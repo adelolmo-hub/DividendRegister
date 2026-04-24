@@ -2,6 +2,8 @@ package app.dividends.domain.model;
 
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.Date;
 
 import lombok.Getter;
@@ -15,4 +17,9 @@ public class Dividend {
 	BigDecimal quantityPerAsset;
 	BigDecimal totalRecievedInEur;
 	
+	public boolean isOcurredAt(YearMonth targetDate) {	
+		return YearMonth.from(date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()).equals(targetDate);
+	}
 }

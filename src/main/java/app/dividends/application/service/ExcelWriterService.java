@@ -26,6 +26,8 @@ import app.dividends.application.ports.input.IExcelWriterService;
 import app.dividends.application.ports.input.IPortfolioService;
 import app.dividends.domain.model.PortfolioDTO;
 import app.dividends.domain.model.Position;
+import app.dividends.infrastructure.output.ColumnProcessor;
+import app.dividends.infrastructure.output.ExcelColumnConfig;
 
 
 @Service
@@ -35,10 +37,8 @@ public class ExcelWriterService implements IExcelWriterService {
 	private final int COLUMN_OFFSET = 1;
 	private final int HEADER_OFFSET = 1;
 	
-	private final int DECIMAL_PLACES = 2;
-	
 	private final String[] portfolioHeaderValues = new String[] 
-			{"Ticker","Cantidad","Precio Medio","Dividendos","Valor Actual","Valor + Dividendos","Rentabilidad","Rentabilidad + Dividendos"};
+			{"Ticker","Cantidad","Precio Medio","Precio Actual","Dividendos","Valor Actual Total","Valor + Dividendos","Rentabilidad"};
 	
 	private final String[] dividendHeaderValues = new String[] 
 			{"Ticker","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "Total", "Yield"};
@@ -59,7 +59,8 @@ public class ExcelWriterService implements IExcelWriterService {
 		Sheet portfolioSheet = workbook.createSheet("Portfolio");
 		Sheet dividendSheet = workbook.createSheet("Dividendos");
 		
-		writePortfolioSheet(positions, styles, portfolioSheet);
+		writeSheet(positions, styles, portfolioSheet, portfolioHeaderValues);
+		writeSheet(positions, styles, dividendSheet, dividendHeaderValues);
 		
 		File currDir = new File(".");
 		String path = currDir.getAbsolutePath();
@@ -80,20 +81,22 @@ public class ExcelWriterService implements IExcelWriterService {
 		return "Done!";
 	}
 
-	private void writePortfolioSheet(List<Position> positions, Map<String, CellStyle> styles, Sheet sheet) {
+
+	private void writeSheet(List<Position> positions, Map<String, CellStyle> styles, Sheet sheet, String[] headerValues) {
 		Row header = sheet.createRow(HEADER_OFFSET);
 		
-		writeHeader(header, portfolioHeaderValues);
+		writeHeader(header, headerValues);
 		
 		for (int i = 0; i < positions.size(); i++) {
 			Position position = positions.get(i);
 			Row row = sheet.createRow(i + ROW_OFFSET);
-			for (int j = 0; j < portfolioHeaderValues.length; j++) {
+			for (int j = 0; j < headerValues.length; j++) {
 				Cell cell = row.createCell(j + COLUMN_OFFSET);
-				try {
-					getCellValue(cell, position, portfolioHeaderValues[j], styles);
-				}catch (Exception e) {
-					cell.setCellValue("null");
+				ColumnProcessor processor = ExcelColumnConfig.COLUMNS.get(headerValues[j]);
+				if(processor != null) {
+					processor.process(cell, position, styles);
+				}else {
+					cell.setCellValue("");
 				}
 			}
 		}
@@ -103,45 +106,6 @@ public class ExcelWriterService implements IExcelWriterService {
 		for (int i = 0; i < headerValues.length; i++) {
 			Cell cell = header.createCell(i + COLUMN_OFFSET);
 			cell.setCellValue(headerValues[i]);
-		}
-	}
-	
-	private void getCellValue(Cell cell, Position position, String value, Map<String, CellStyle> styles) {
-		switch(value) {
-		case "Ticker":
-			cell.setCellValue(position.getTicker());
-			break;
-		case "Cantidad":
-			cell.setCellValue(position.getQuantity());
-			break;
-		case "Precio Medio":
-			cell.setCellValue(position.getAverageCost().setScale(DECIMAL_PLACES, RoundingMode.DOWN).doubleValue());
-			break;
-		case "Dividendos":
-			cell.setCellValue(position.getTotalDividends().setScale(DECIMAL_PLACES, RoundingMode.HALF_UP).doubleValue());
-			break;
-		case "Valor Actual":
-			cell.setCellValue(position.getCurrentValue().setScale(DECIMAL_PLACES, RoundingMode.DOWN).doubleValue());
-			break;
-		case "Valor + Dividendos":
-			cell.setCellValue(position.getTotalProfitWithDividends().setScale(DECIMAL_PLACES, RoundingMode.HALF_UP).doubleValue());
-			break;
-		case "Rentabilidad":
-			cell.setCellValue(position.getProfit().setScale(DECIMAL_PLACES, RoundingMode.HALF_UP).doubleValue());
-			if(position.getProfit().compareTo(BigDecimal.ZERO) >= 0) {
-				cell.setCellStyle(styles.get("percent_positive"));
-			}else {
-				cell.setCellStyle(styles.get("percent_negative"));
-			}
-			break;
-		case "Rentabilidad + Dividendos":
-			cell.setCellValue(position.getTotalProfitWithDividends().setScale(DECIMAL_PLACES, RoundingMode.HALF_UP).doubleValue());
-			if(position.getTotalProfitWithDividends().compareTo(BigDecimal.ZERO) >= 0) {
-				cell.setCellStyle(styles.get("percent_positive"));
-			}else {
-				cell.setCellStyle(styles.get("percent_negative"));
-			}
-			break;
 		}
 	}
 	
