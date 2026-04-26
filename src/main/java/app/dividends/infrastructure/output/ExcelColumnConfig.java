@@ -20,38 +20,37 @@ public class ExcelColumnConfig {
 	public static final Map<String, ColumnProcessor> COLUMNS = new HashMap<>();
 	
 	static {
-		//TODO rellenar esta funcion tostonazo
 		
 		// -----STRINGS-------
-		COLUMNS.put("Ticker", (cell, pos, styles) -> cell.setCellValue(pos.getTicker()));
+		COLUMNS.put("Ticker", (cell, pos, styles, year) -> cell.setCellValue(pos.getTicker()));
 		
 		//------INTEGER----
-		COLUMNS.put("Cantidad", (cell, pos, styles) -> cell.setCellValue(pos.getQuantity()));
+		COLUMNS.put("Cantidad", (cell, pos, styles, year) -> cell.setCellValue(pos.getQuantity()));
 		
 		//------BIGDECIMALS----
-		COLUMNS.put("Precio Medio", (cell, pos, styles) -> cell.setCellValue(scale(pos.getAverageCost(), RoundingMode.DOWN)));
-		COLUMNS.put("Dividendos", (cell, pos, styles) -> cell.setCellValue(scale(pos.getTotalDividends(), RoundingMode.HALF_UP)));
-		COLUMNS.put("Precio Actual", (cell, pos, styles) -> cell.setCellValue(scale(pos.getCurrentValue(), RoundingMode.HALF_UP)));
-		COLUMNS.put("Valor Actual Total", (cell, pos, styles) -> cell.setCellValue(scale(pos.getTotalValue(), RoundingMode.HALF_UP)));
-		COLUMNS.put("Rentabilidad", (cell, pos, styles) -> setStyle(scale(pos.getProfit(), RoundingMode.HALF_UP), styles, cell));
-		COLUMNS.put("Valor + Dividendos", (cell, pos, styles) -> setStyle(scale(pos.getTotalProfitWithDividends(), RoundingMode.HALF_UP), styles, cell));
+		COLUMNS.put("Precio Medio", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getAverageCost(), RoundingMode.DOWN)));
+		COLUMNS.put("Dividendos", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalDividends(), RoundingMode.HALF_UP)));
+		COLUMNS.put("Precio Actual", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getCurrentValue(), RoundingMode.HALF_UP)));
+		COLUMNS.put("Valor Actual Total", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalValue(), RoundingMode.HALF_UP)));
+		COLUMNS.put("Rentabilidad", (cell, pos, styles, year) -> setStyle(scale(pos.getProfit(), RoundingMode.HALF_UP), styles, cell));
+		COLUMNS.put("Valor + Dividendos", (cell, pos, styles, year) -> setStyle(scale(pos.getTotalProfitWithDividends(), RoundingMode.HALF_UP), styles, cell));
 		
 		//-----------MONTHS----
-		COLUMNS.put("Enero", (cell, pos, styles) -> cell.setCellValue(scale(processDividend(pos, YearMonth.of(2025, 1)), RoundingMode.DOWN)));
-		COLUMNS.put("Febrero", (cell, pos, styles) -> cell.setCellValue(scale(processDividend(pos, YearMonth.of(2025, 2)), RoundingMode.DOWN)));
-		COLUMNS.put("Marzo", (cell, pos, styles) -> cell.setCellValue(scale(processDividend(pos, YearMonth.of(2025, 3)), RoundingMode.DOWN)));
-		COLUMNS.put("Abril", (cell, pos, styles) -> cell.setCellValue(scale(processDividend(pos, YearMonth.of(2025, 4)), RoundingMode.DOWN)));
-		COLUMNS.put("Mayo", (cell, pos, styles) -> cell.setCellValue(scale(processDividend(pos, YearMonth.of(2025, 5)), RoundingMode.DOWN)));
-		COLUMNS.put("Junio", (cell, pos, styles) -> cell.setCellValue(scale(processDividend(pos, YearMonth.of(2025, 6)), RoundingMode.DOWN)));
-		COLUMNS.put("Julio", (cell, pos, styles) -> cell.setCellValue(scale(processDividend(pos, YearMonth.of(2025, 7)), RoundingMode.DOWN)));
-		COLUMNS.put("Agosto", (cell, pos, styles) -> cell.setCellValue(scale(processDividend(pos, YearMonth.of(2025, 8)), RoundingMode.DOWN)));
-		COLUMNS.put("September", (cell, pos, styles) -> cell.setCellValue(scale(processDividend(pos, YearMonth.of(2025, 9)), RoundingMode.DOWN)));
-		COLUMNS.put("Octubre", (cell, pos, styles) -> cell.setCellValue(scale(processDividend(pos, YearMonth.of(2025, 10)), RoundingMode.DOWN)));
-		COLUMNS.put("Noviembre", (cell, pos, styles) -> cell.setCellValue(scale(processDividend(pos, YearMonth.of(2025, 11)), RoundingMode.DOWN)));
-		COLUMNS.put("Diciembre", (cell, pos, styles) -> cell.setCellValue(scale(processDividend(pos, YearMonth.of(2025, 12)), RoundingMode.DOWN)));
+		COLUMNS.put("Enero", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 1)), cell, styles));
+		COLUMNS.put("Febrero", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 2)), cell, styles));
+		COLUMNS.put("Marzo", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 3)), cell, styles));
+		COLUMNS.put("Abril", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 4)), cell, styles));
+		COLUMNS.put("Mayo", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 5)), cell, styles));
+		COLUMNS.put("Junio", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 6)), cell, styles));
+		COLUMNS.put("Julio", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 7)), cell, styles));
+		COLUMNS.put("Agosto", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 8)), cell, styles));
+		COLUMNS.put("Septiembre", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 9)), cell, styles));
+		COLUMNS.put("Octubre", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 10)), cell, styles));
+		COLUMNS.put("Noviembre", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 11)), cell, styles));
+		COLUMNS.put("Diciembre", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 12)), cell, styles));
 		
 		//--------------GENERIC--------------
-		COLUMNS.put("Total", (cell, pos, styles) -> {
+		COLUMNS.put("Total", (cell, pos, styles, year) -> {
 			int rowIdx = cell.getRowIndex() + 1;
 			String colC = CellReference.convertNumToColString(2);
 			String colN = CellReference.convertNumToColString(13);
@@ -79,5 +78,12 @@ public class ExcelColumnConfig {
 	    return pos.findDividendByDate(period)
 	              .map(Dividend::getTotalRecievedInEur)
 	              .orElse(BigDecimal.ZERO);             
+	}
+	
+	private static void styleDividendCell(Position pos, BigDecimal value, Cell cell, Map<String, CellStyle> styles) {
+		if(!value.equals(BigDecimal.ZERO)) {
+			cell.setCellStyle(styles.get("dividend_cell"));
+			cell.setCellValue(scale(value, RoundingMode.DOWN));
+		}
 	}
 }

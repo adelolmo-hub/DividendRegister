@@ -10,5 +10,5 @@ import app.dividends.domain.model.Position;
 @FunctionalInterface
 public interface ColumnProcessor {
 
-	void process(Cell cell, Position position, Map<String, CellStyle> styles);
+	void process(Cell cell, Position position, Map<String, CellStyle> styles, int year);
 }
