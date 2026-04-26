@@ -4,7 +4,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Date;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
@@ -68,6 +71,11 @@ public class Position {
 		}
 	}
 	
+	public Optional<Dividend> findDividendByDate(YearMonth yearMonth) {
+		return dividendsRecieved.stream()
+	            .filter(d -> d.isOcurredAt(yearMonth))
+	            .findFirst();
+	}
 	
 	
 }
