@@ -18,6 +18,8 @@ import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.util.CellAddress;
+import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ public class ExcelWriterService implements IExcelWriterService {
 	private final int ROW_OFFSET = 2;
 	private final int COLUMN_OFFSET = 1;
 	private final int HEADER_OFFSET = 1;
+	private final int TABLE_OFFSET = 2;
 	
 	private final int STARTER_YEAR = 2023;
 	private final int CURRENT_YEAR = Year.now().getValue();
@@ -121,12 +124,13 @@ public class ExcelWriterService implements IExcelWriterService {
 
 	private void writeDividendSheet(List<Position> positions, Map<String, CellStyle> styles, Sheet sheet, String[] headerValues) {
 		int rowCount = 0;
-		Row header = sheet.createRow(HEADER_OFFSET);
-		writeHeader(header, headerValues, styles);
 		for(int k = STARTER_YEAR; k <= CURRENT_YEAR; k++) {
+			Row row = sheet.createRow(rowCount + ROW_OFFSET); 
+			writeHeader(row, headerValues, styles);
+			rowCount++;
 			for (int i = 0; i < positions.size(); i++) {
 				Position position = positions.get(i);
-				Row row = sheet.createRow(rowCount + ROW_OFFSET);
+				row = sheet.createRow(rowCount + ROW_OFFSET);
 				for (int j = 0; j < headerValues.length; j++) {
 					Cell cell = row.createCell(j + COLUMN_OFFSET);
 					setAlternateColorBackground(cell, i, styles);
@@ -140,9 +144,14 @@ public class ExcelWriterService implements IExcelWriterService {
 				}
 				rowCount++;
 			}
-			rowCount += ROW_OFFSET; 
+			row = sheet.createRow(rowCount + ROW_OFFSET);
+			writeFooter(row, styles, headerValues, positions);
+			rowCount+= TABLE_OFFSET;
 		}
 	}
+
+	
+
 
 	private void setAlternateColorBackground(Cell cell, int i, Map<String, CellStyle> styles) {
 		if(i % 2 == 0) {
@@ -159,6 +168,23 @@ public class ExcelWriterService implements IExcelWriterService {
 			cell.setCellValue(headerValues[i]);
 			cell.setCellStyle(styles.get("cell_border"));
 		}
+	}
+	
+	private void writeFooter(Row footer, Map<String, CellStyle> styles, String[] headerValues, List<Position> positions) {
+		//La i empieza en 1 y lenght -1 porque la primera y ultima celda no interesan
+		for(int i = 1; i < headerValues.length - 1; i++) {
+			Cell cell = footer.createCell(i + COLUMN_OFFSET);
+			int rowIndex = cell.getRowIndex() + 1;
+			String columnIndex = CellReference.convertNumToColString(cell.getColumnIndex());
+			
+			String firstColumn = columnIndex + (rowIndex-positions.size());
+			String lastColumn = columnIndex + (rowIndex-1); 
+			
+			String formula = String.format("SUM(%s:%s)", firstColumn, lastColumn);
+			cell.setCellFormula(formula);
+			cell.setCellStyle(styles.get("dividend_cell"));
+		}
+		
 	}
 	
 	private void autoSizeColumns(Sheet sheet) {
