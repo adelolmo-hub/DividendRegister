@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import app.dividends.application.ports.input.IExcelWriterService;
 import app.dividends.application.ports.input.IPortfolioService;
+import app.dividends.domain.model.PortfolioDTO;
 import app.dividends.domain.model.Position;
 import app.dividends.infrastructure.output.ColumnProcessor;
 import app.dividends.infrastructure.output.ExcelColumnConfig;
@@ -40,7 +41,8 @@ public class ExcelWriterService implements IExcelWriterService {
 	private final int CURRENT_YEAR = Year.now().getValue();
 	
 	private final String[] portfolioHeaderValues = new String[] 
-			{"Ticker","Cantidad","Precio Medio","Precio Actual","Dividendos","Valor Actual Total","Valor + Dividendos","Rentabilidad"};
+			{"Ticker","Cantidad","Precio Medio","Precio total","Precio Actual","Dividendos",
+					"Valor Actual Total","Beneficios + Dividendos","Precio Actual + Dividendos","Rentabilidad", "Rentabilidad + Dividendos"};
 	
 	private final String[] dividendHeaderValues = new String[] 
 			{"Ticker","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "Total", "Yield"};
@@ -54,14 +56,15 @@ public class ExcelWriterService implements IExcelWriterService {
 	public String writePortfolio() {
 		Workbook workbook = new XSSFWorkbook();
 
-		List<Position> positions = portfolioService.calculatePortfolio().getPositions();
+		PortfolioDTO portfolio = portfolioService.calculatePortfolio();
+		List<Position> positions = portfolio.getPositions();
 		
 		Map<String, CellStyle> styles = createStyles(workbook);
 		
 		Sheet portfolioSheet = workbook.createSheet("Portfolio");
 		Sheet dividendSheet = workbook.createSheet("Dividendos");
 		
-		writeSheet(positions, styles, portfolioSheet, portfolioHeaderValues);
+		writeSheet(portfolio, styles, portfolioSheet, portfolioHeaderValues);
 		writeDividendSheet(positions, styles, dividendSheet, dividendHeaderValues);
 		
 		File currDir = new File(".");
@@ -70,7 +73,7 @@ public class ExcelWriterService implements IExcelWriterService {
 		
 		try {
 			autoSizeColumns(portfolioSheet);
-			autoSizeColumns(portfolioSheet);
+			autoSizeColumns(dividendSheet);
 			FileOutputStream outputStream = new FileOutputStream(fileLocation);
 			workbook.write(outputStream);
 			workbook.close();
@@ -84,33 +87,43 @@ public class ExcelWriterService implements IExcelWriterService {
 	}
 
 
-	private void writeSheet(List<Position> positions, Map<String, CellStyle> styles, Sheet sheet, String[] headerValues) {
+	private void writeSheet(PortfolioDTO portfolio, Map<String, CellStyle> styles, Sheet sheet, String[] headerValues) {
 		Row header = sheet.createRow(HEADER_OFFSET);
+		int rowCount = 0;
+		
+		List<Position> positions = portfolio.getPositions();
 		
 		writeHeader(header, headerValues, styles);
 		
-		for (int i = 0; i < positions.size(); i++) {
-			Position position = positions.get(i);
-			Row row = sheet.createRow(i + ROW_OFFSET);
+		for (rowCount = 0; rowCount < positions.size(); rowCount++) {
+			Position position = positions.get(rowCount);
+			Row row = sheet.createRow(rowCount + ROW_OFFSET);
 			for (int j = 0; j < headerValues.length; j++) {
 				Cell cell = row.createCell(j + COLUMN_OFFSET);
-				setAlternateColorBackground(cell, i, styles);
+				setAlternateColorBackground(cell, rowCount, styles);
 				ColumnProcessor processor = ExcelColumnConfig.COLUMNS.get(headerValues[j]);
 				if(processor != null) {
 					processor.process(cell, position, styles, 0);
 				}else {
 					cell.setCellValue("");
 				}
-				
 			}
+		}
+		Row row = sheet.createRow(rowCount + 2);
+		for (int i = 0; i < headerValues.length; i++) {
+			Cell cell = row.createCell(i + COLUMN_OFFSET);
+			setTotalValuesCell(cell, headerValues[i], portfolio, styles);
 		}
 	}
 	
+
+
+
 	private void writeDividendSheet(List<Position> positions, Map<String, CellStyle> styles, Sheet sheet, String[] headerValues) {
 		int rowCount = 0;
 		Row header = sheet.createRow(HEADER_OFFSET);
 		writeHeader(header, headerValues, styles);
-		for(int k = STARTER_YEAR; k < CURRENT_YEAR; k++) {
+		for(int k = STARTER_YEAR; k <= CURRENT_YEAR; k++) {
 			for (int i = 0; i < positions.size(); i++) {
 				Position position = positions.get(i);
 				Row row = sheet.createRow(rowCount + ROW_OFFSET);
@@ -161,6 +174,26 @@ public class ExcelWriterService implements IExcelWriterService {
 	    }
 	}
 	
+	
+	private void setTotalValuesCell(Cell cell, String value, PortfolioDTO portfolio, Map<String, CellStyle> styles) {
+		switch(value) {
+			case "Dividendos":
+				cell.setCellValue(portfolio.getTotalDividends().doubleValue());
+				cell.setCellStyle(styles.get("dividend_cell"));
+				break;
+			case "Valor Actual Total":
+				cell.setCellValue(portfolio.getTotalValue().doubleValue());
+				cell.setCellStyle(styles.get("dividend_cell"));
+				break;
+			case "Rentabilidad":
+				cell.setCellValue(portfolio.getTotalProfit().doubleValue());
+				cell.setCellStyle(styles.get("dividend_cell"));
+				break;
+			default:
+				break;
+		}
+		
+	}
 	private Map<String, CellStyle> createStyles(Workbook wb){
 		Map<String, CellStyle> mapStyles = new HashMap<>();
 		

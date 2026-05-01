@@ -31,9 +31,12 @@ public class ExcelColumnConfig {
 		COLUMNS.put("Precio Medio", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getAverageCost(), RoundingMode.DOWN)));
 		COLUMNS.put("Dividendos", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalDividends(), RoundingMode.HALF_UP)));
 		COLUMNS.put("Precio Actual", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getCurrentValue(), RoundingMode.HALF_UP)));
+		COLUMNS.put("Precio total", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalCost(), RoundingMode.HALF_UP)));
 		COLUMNS.put("Valor Actual Total", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalValue(), RoundingMode.HALF_UP)));
 		COLUMNS.put("Rentabilidad", (cell, pos, styles, year) -> setStyle(scale(pos.getProfit(), RoundingMode.HALF_UP), styles, cell));
-		COLUMNS.put("Valor + Dividendos", (cell, pos, styles, year) -> setStyle(scale(pos.getTotalProfitWithDividends(), RoundingMode.HALF_UP), styles, cell));
+		COLUMNS.put("Beneficios + Dividendos", (cell, pos, styles, year) -> setStyle(scale(pos.getTotalProfitWithDividends(), RoundingMode.HALF_UP), styles, cell));
+		COLUMNS.put("Precio Actual + Dividendos", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalValueWithDividends(), RoundingMode.HALF_UP)));
+		COLUMNS.put("Rentabilidad + Dividendos", (cell, pos, styles, year) -> setStyle(scale(pos.getTotalProfitWithDividendsPercent(), RoundingMode.HALF_UP), styles, cell));
 		
 		//-----------MONTHS----
 		COLUMNS.put("Enero", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 1)), cell, styles));

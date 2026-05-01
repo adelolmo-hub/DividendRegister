@@ -20,28 +20,32 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Getter @Setter
-@JsonPropertyOrder({"ticker", "quantity", "currentValue", "averageCost", "totalValue", "profit", "totalProfit", "totalProfitWithDividends", "dividendsRecieved"})
+@JsonPropertyOrder({"ticker", "quantity", "currentValue", "averageCost","totalCost", "totalValue", "profit", "totalProfit", "totalProfitWithDividends", "dividendsRecieved"})
 public class Position {
 
 	private String ticker;
 	private int quantity;
 	
 	private BigDecimal averageCost;
+	private BigDecimal totalCost;
 	private BigDecimal currentValue;
 	private BigDecimal currentValueEUR;
 	private BigDecimal totalValue;
+	private BigDecimal totalValueWithDividends;
 	private BigDecimal profit; 
 	private BigDecimal totalProfit;
 	private BigDecimal totalProfitWithDividends;
 	private BigDecimal totalDividends;
+	private BigDecimal totalProfitWithDividendsPercent;
 	
 	private List<Dividend> dividendsRecieved;
 	
-	public Position(String ticker, int quantity, BigDecimal averageCost, List<Dividend> dividendsRecieved, BigDecimal currentValue, BigDecimal currenValueEUR) {
+	public Position(String ticker, int quantity, BigDecimal averageCost,BigDecimal totalCost, List<Dividend> dividendsRecieved, BigDecimal currentValue, BigDecimal currenValueEUR) {
 		super();
 		this.ticker = ticker;
 		this.quantity = quantity;
 		this.averageCost = averageCost;
+		this.totalCost = totalCost;
 		this.dividendsRecieved = dividendsRecieved;
 		this.currentValue = currentValue;
 		this.currentValueEUR = currenValueEUR;
@@ -68,6 +72,13 @@ public class Position {
             
             this.totalProfitWithDividends = totalProfit.add(totalDividends)
             		.setScale(2, RoundingMode.HALF_EVEN);
+            
+            this.totalProfitWithDividendsPercent = totalProfitWithDividends
+            		.divide(averageCost, 4, RoundingMode.HALF_EVEN)
+                    .multiply(new BigDecimal("100"))
+                    .setScale(2, RoundingMode.HALF_EVEN);
+            
+            this.totalValueWithDividends = totalValue.add(totalDividends);
 		}
 	}
 	
