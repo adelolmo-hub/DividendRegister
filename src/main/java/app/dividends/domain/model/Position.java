@@ -74,7 +74,7 @@ public class Position {
             		.setScale(2, RoundingMode.HALF_EVEN);
             
             this.totalProfitWithDividendsPercent = totalProfitWithDividends
-            		.divide(averageCost, 4, RoundingMode.HALF_EVEN)
+            		.divide(totalCost, 4, RoundingMode.HALF_EVEN)
                     .multiply(new BigDecimal("100"))
                     .setScale(2, RoundingMode.HALF_EVEN);
             

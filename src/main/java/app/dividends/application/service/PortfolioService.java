@@ -163,6 +163,7 @@ public class PortfolioService implements IPortfolioService{
 			snapshot.setAverageCost(position.getAverageCost());
 			snapshot.setCurrentValue(position.getCurrentValue());
 			snapshot.setCurrentValueEUR(position.getCurrentValueEUR());
+			snapshot.setTotalCost(position.getTotalCost());
 			snapshot.setTotalValue(position.getTotalValue());
 			snapshot.setProfit(position.getProfit());
 			snapshot.setTotalProfit(position.getTotalProfit());
