@@ -215,6 +215,17 @@ public class ExcelWriterService implements IExcelWriterService {
 				cell.setCellValue(portfolio.getTotalProfit().doubleValue());
 				cell.setCellStyle(styles.get("dividend_cell"));
 				break;
+			case "Precio total":
+				
+				break;
+			case "Precio Actual + Dividendos":
+				cell.setCellValue(portfolio.getTotalValueWithDividends().doubleValue());
+				cell.setCellStyle(styles.get("dividend_cell"));
+				break;
+			case "Rentabilidad + Dividendos":
+				cell.setCellValue(portfolio.getTotalProfitWithDividends().doubleValue());
+				cell.setCellStyle(styles.get("dividend_cell"));
+				break;
 			default:
 				break;
 		}
@@ -232,6 +243,8 @@ public class ExcelWriterService implements IExcelWriterService {
 		posPct.setBorderTop(BorderStyle.THIN);
 		posPct.setBorderLeft(BorderStyle.THIN);
 		posPct.setBorderRight(BorderStyle.THIN);
+		posPct.setFillForegroundColor(IndexedColors.TAN.getIndex());
+		posPct.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 		mapStyles.put("percent_positive", posPct);
 		
 		//Red Style (negatives)
@@ -243,6 +256,8 @@ public class ExcelWriterService implements IExcelWriterService {
 		negPct.setBorderTop(BorderStyle.THIN);
 		negPct.setBorderLeft(BorderStyle.THIN);
 		negPct.setBorderRight(BorderStyle.THIN);
+		negPct.setFillForegroundColor(IndexedColors.TAN.getIndex());
+		negPct.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 		mapStyles.put("percent_negative", negPct);
 		
 		//Border
