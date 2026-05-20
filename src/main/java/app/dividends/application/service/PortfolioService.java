@@ -95,6 +95,7 @@ public class PortfolioService implements IPortfolioService{
 							snap.getTicker(),
 							snap.getQuantity(),
 							snap.getAverageCost(),
+							snap.getTotalCost(),
 							getDividends(snap.getTicker()),
 							snap.getCurrentValue(),
 							snap.getCurrentValueEUR()
@@ -150,7 +151,7 @@ public class PortfolioService implements IPortfolioService{
 		if (totalPurchasedQuantity != 0) {
 			averageCost = totalCost.divide(BigDecimal.valueOf(totalPurchasedQuantity), 2, RoundingMode.HALF_EVEN);
 		}
-		return new Position(ticker, currentQuantity, averageCost, dividends, currentValue, currentValueEUR);
+		return new Position(ticker, currentQuantity, averageCost,totalCost, dividends, currentValue, currentValueEUR);
 	}
 	
 	
@@ -162,6 +163,7 @@ public class PortfolioService implements IPortfolioService{
 			snapshot.setAverageCost(position.getAverageCost());
 			snapshot.setCurrentValue(position.getCurrentValue());
 			snapshot.setCurrentValueEUR(position.getCurrentValueEUR());
+			snapshot.setTotalCost(position.getTotalCost());
 			snapshot.setTotalValue(position.getTotalValue());
 			snapshot.setProfit(position.getProfit());
 			snapshot.setTotalProfit(position.getTotalProfit());

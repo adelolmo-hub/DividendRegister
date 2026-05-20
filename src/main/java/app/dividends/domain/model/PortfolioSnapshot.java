@@ -24,12 +24,14 @@ public class PortfolioSnapshot {
 	private int quantity;
 	
 	private BigDecimal averageCost;
+	private BigDecimal totalCost;
 	private BigDecimal currentValue;
 	private BigDecimal currentValueEUR;
 	private BigDecimal totalValue;
-	private BigDecimal profit; 
+	private BigDecimal profit;
 	private BigDecimal totalProfit;
 	private BigDecimal totalProfitWithDividends;
 	
 	private LocalDateTime lastUpdate;
+
 }
