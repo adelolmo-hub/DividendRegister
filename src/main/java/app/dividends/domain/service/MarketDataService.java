@@ -1,4 +1,4 @@
-package app.dividends.application.service;
+package app.dividends.domain.service;
 
 import java.math.BigDecimal;
 import org.springframework.cache.annotation.Cacheable;

@@ -8,12 +8,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import app.dividends.domain.model.DividendTransaction;
-import app.dividends.domain.model.Transaction;
+import app.dividends.domain.model.AbstractTransaction;
 
 @Repository
-public interface TransactionRepository extends JpaRepository<Transaction, Long>{
+public interface TransactionRepository extends JpaRepository<AbstractTransaction, Long>{
 	boolean existsByExternalId(String externalId);
-	List<Transaction> findAllByOrderByDateAsc();
+	List<AbstractTransaction> findAllByOrderByDateAsc();
 	List<DividendTransaction> findAllByTicker(String ticker);
 	DividendTransaction findByTickerAndDate(String ticker, Date date);
 }

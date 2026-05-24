@@ -26,7 +26,7 @@ import org.springframework.stereotype.Service;
 
 import app.dividends.application.ports.input.IExcelWriterService;
 import app.dividends.application.ports.input.IPortfolioService;
-import app.dividends.domain.model.PortfolioDTO;
+import app.dividends.domain.model.Portfolio;
 import app.dividends.domain.model.Position;
 import app.dividends.infrastructure.output.ColumnProcessor;
 import app.dividends.infrastructure.output.ExcelColumnConfig;
@@ -59,7 +59,7 @@ public class ExcelWriterService implements IExcelWriterService {
 	public String writePortfolio() {
 		Workbook workbook = new XSSFWorkbook();
 
-		PortfolioDTO portfolio = portfolioService.calculatePortfolio();
+		Portfolio portfolio = portfolioService.calculatePortfolio();
 		List<Position> positions = portfolio.getPositions();
 		
 		Map<String, CellStyle> styles = createStyles(workbook);
@@ -90,7 +90,7 @@ public class ExcelWriterService implements IExcelWriterService {
 	}
 
 
-	private void writeSheet(PortfolioDTO portfolio, Map<String, CellStyle> styles, Sheet sheet, String[] headerValues) {
+	private void writeSheet(Portfolio portfolio, Map<String, CellStyle> styles, Sheet sheet, String[] headerValues) {
 		Row header = sheet.createRow(HEADER_OFFSET);
 		int rowCount = 0;
 		
@@ -201,7 +201,7 @@ public class ExcelWriterService implements IExcelWriterService {
 	}
 	
 	
-	private void setTotalValuesCell(Cell cell, String value, PortfolioDTO portfolio, Map<String, CellStyle> styles) {
+	private void setTotalValuesCell(Cell cell, String value, Portfolio portfolio, Map<String, CellStyle> styles) {
 		switch(value) {
 			case "Dividendos":
 				cell.setCellValue(portfolio.getTotalDividends().doubleValue());

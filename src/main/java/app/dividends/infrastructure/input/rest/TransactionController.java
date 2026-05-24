@@ -14,7 +14,7 @@ import app.dividends.application.ports.input.IExcelWriterService;
 import app.dividends.application.ports.input.IFileImportUseCase;
 import app.dividends.application.ports.input.IPortfolioService;
 import app.dividends.domain.model.ImportReport;
-import app.dividends.domain.model.PortfolioDTO;
+import app.dividends.domain.model.Portfolio;
 
 @RestController
 @RequestMapping("/api")
@@ -38,8 +38,8 @@ public class TransactionController {
 	}
 	
 	@GetMapping("/positions")
-	public ResponseEntity<PortfolioDTO> getPositions() {
-		return new ResponseEntity<PortfolioDTO>(portfolioService.calculatePortfolio(), HttpStatus.OK);
+	public ResponseEntity<Portfolio> getPositions() {
+		return new ResponseEntity<Portfolio>(portfolioService.calculatePortfolio(), HttpStatus.OK);
 	}
 	
 	@GetMapping("/getExcel")

@@ -10,7 +10,20 @@ import lombok.Setter;
 @Entity
 @DiscriminatorValue("Dividend")
 @Getter @Setter
-public class DividendTransaction extends Transaction{
+public class DividendTransaction extends AbstractTransaction{
 	private BigDecimal taxAmount;
 	private BigDecimal amountReceived;
+	private BigDecimal amountReceivedByAsset;
+	
+	@Override
+	public void applyTo(Position position, BigDecimal exchangeRate) {
+		 Dividend d = new Dividend(
+		    this.getDate(),
+		    this.getCurrency(),
+		    this.getAmountReceivedByAsset(),
+		    this.getAmountReceived().multiply(exchangeRate)
+		    );
+		 position.addDividend(d);
+	}
+	
 }

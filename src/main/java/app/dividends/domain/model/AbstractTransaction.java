@@ -22,7 +22,7 @@ import jakarta.persistence.UniqueConstraint;
 })
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "type")
-public class Transaction {
+public abstract class AbstractTransaction implements Transaction{
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,11 +33,10 @@ public class Transaction {
 	
 	String ticker;
 	String currency;
-	BigDecimal price;
 	Date date;
 	
 	public String calculateId() throws NoSuchAlgorithmException {
-		String raw = String.format("%s|%s|%f", date, ticker, price);
+		String raw = String.format("%s|%s|%f", date, ticker);
 		return HashUtils.hashSHA256(raw);
 	}
 
@@ -47,14 +46,6 @@ public class Transaction {
 
 	public void setTicker(String ticker) {
 		this.ticker = ticker;
-	}
-
-	public BigDecimal getPrice() {
-		return price;
-	}
-
-	public void setPrice(BigDecimal price) {
-		this.price = price;
 	}
 
 	public Date getDate() {

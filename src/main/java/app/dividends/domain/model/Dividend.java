@@ -6,16 +6,17 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.Date;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
 
-@Getter @Setter
+@Getter
+@AllArgsConstructor
 public class Dividend {
 
-	Date date;
-	String currency;
-	BigDecimal quantityPerAsset;
-	BigDecimal totalRecievedInEur;
+	private final Date date;
+    private final String currency;
+    private final BigDecimal amountPerAsset;
+    private final BigDecimal totalReceivedEUR;
 	
 	public boolean isOcurredAt(YearMonth targetDate) {	
 		return YearMonth.from(date.toInstant()

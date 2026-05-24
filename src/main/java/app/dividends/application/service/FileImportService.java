@@ -31,7 +31,7 @@ import app.dividends.domain.model.DividendTransaction;
 import app.dividends.domain.model.ImportReport;
 import app.dividends.domain.model.ImportReport.LineError;
 import app.dividends.domain.model.Order;
-import app.dividends.domain.model.Transaction;
+import app.dividends.domain.model.AbstractTransaction;
 import app.dividends.domain.service.DataExtractor;
 import app.dividends.domain.service.DataExtractor.ExtractionResult;
 import app.dividends.infrastructure.persistence.TransactionRepository;
@@ -61,7 +61,7 @@ public class FileImportService implements IFileImportUseCase{
 					.build();
 			List<String[]> lines = csvReader.readAll();
 			
-			Transaction transaction = null;
+			AbstractTransaction transaction = null;
 			for(String[] line : lines) {
 				try {
 					currentLine++;
@@ -98,7 +98,7 @@ public class FileImportService implements IFileImportUseCase{
 		return new ImportReport(totalProcessedLines, failedLines, errors);	
 	}
 
-	private Transaction extractDividendTaxes(String[] line) {
+	private AbstractTransaction extractDividendTaxes(String[] line) {
 		String ticker = dataExtractor.extractDataFromCsv(line[4], line[2]).ticker();
 		Date date = Date.valueOf(line[3]);
 		DividendTransaction dividendTx = repo.findByTickerAndDate(ticker, date);
@@ -117,7 +117,7 @@ public class FileImportService implements IFileImportUseCase{
 			dividend.setDate(Date.valueOf(line[3]));
 			
 			if(result.price() != null){
-				dividend.setPrice(new BigDecimal(result.price()));
+				dividend.setAmountReceivedByAsset(new BigDecimal(result.price()));
 			}
 			String hashId = dividend.calculateId();
 			dividend.setExternalId(hashId);
