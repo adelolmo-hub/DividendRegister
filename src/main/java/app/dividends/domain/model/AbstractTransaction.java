@@ -1,6 +1,5 @@
 package app.dividends.domain.model;
 
-import java.math.BigDecimal;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 
@@ -36,7 +35,7 @@ public abstract class AbstractTransaction implements Transaction{
 	Date date;
 	
 	public String calculateId() throws NoSuchAlgorithmException {
-		String raw = String.format("%s|%s|%f", date, ticker);
+		String raw = String.format("%s|%s", date, ticker);
 		return HashUtils.hashSHA256(raw);
 	}
 
