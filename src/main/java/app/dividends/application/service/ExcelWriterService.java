@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.Year;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 
@@ -20,12 +21,14 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellAddress;
 import org.apache.poi.ss.util.CellReference;
+import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import app.dividends.application.ports.input.IExcelWriterService;
 import app.dividends.application.ports.input.IPortfolioService;
+import app.dividends.domain.model.ExcelColumns;
 import app.dividends.domain.model.Portfolio;
 import app.dividends.domain.model.Position;
 import app.dividends.infrastructure.output.ColumnProcessor;
@@ -43,9 +46,7 @@ public class ExcelWriterService implements IExcelWriterService {
 	private final int STARTER_YEAR = 2023;
 	private final int CURRENT_YEAR = Year.now().getValue();
 	
-	private final String[] portfolioHeaderValues = new String[] 
-			{"Ticker","Cantidad","Precio Medio","Precio total","Precio Actual","Dividendos",
-					"Valor Actual Total","Beneficios + Dividendos","Precio Actual + Dividendos","Rentabilidad", "Rentabilidad + Dividendos"};
+	private final String[] portfolioHeaderValues = ExcelColumns.getHeaders();
 	
 	private final String[] dividendHeaderValues = new String[] 
 			{"Ticker","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "Total", "Yield"};
@@ -166,7 +167,7 @@ public class ExcelWriterService implements IExcelWriterService {
 		for (int i = 0; i < headerValues.length; i++) {
 			Cell cell = header.createCell(i + COLUMN_OFFSET);
 			cell.setCellValue(headerValues[i]);
-			cell.setCellStyle(styles.get("cell_border"));
+			cell.setCellStyle(styles.get("header_cell"));
 		}
 	}
 	
@@ -202,29 +203,23 @@ public class ExcelWriterService implements IExcelWriterService {
 	
 	
 	private void setTotalValuesCell(Cell cell, String value, Portfolio portfolio, Map<String, CellStyle> styles) {
+		
 		switch(value) {
-			case "Dividendos":
+			case "Dividendos Cobrados":
 				cell.setCellValue(portfolio.getTotalDividends().doubleValue());
-				cell.setCellStyle(styles.get("dividend_cell"));
+				cell.setCellStyle(styles.get("percent_positive"));
 				break;
-			case "Valor Actual Total":
+			case "Valor Actual":
 				cell.setCellValue(portfolio.getTotalValue().doubleValue());
-				cell.setCellStyle(styles.get("dividend_cell"));
+				cell.setCellStyle(styles.get("percent_positive"));
 				break;
-			case "Rentabilidad":
-				cell.setCellValue(portfolio.getTotalProfit().doubleValue());
-				cell.setCellStyle(styles.get("dividend_cell"));
+			case "Coste total":
+				cell.setCellValue(portfolio.getTotalCost().doubleValue());
+				cell.setCellStyle(styles.get("percent_positive"));
 				break;
-			case "Precio total":
-				
-				break;
-			case "Precio Actual + Dividendos":
+			case "Valor mas Dividendos":
 				cell.setCellValue(portfolio.getTotalValueWithDividends().doubleValue());
-				cell.setCellStyle(styles.get("dividend_cell"));
-				break;
-			case "Rentabilidad + Dividendos":
-				cell.setCellValue(portfolio.getTotalProfitWithDividends().doubleValue());
-				cell.setCellStyle(styles.get("dividend_cell"));
+				cell.setCellStyle(styles.get("percent_positive"));
 				break;
 			default:
 				break;
@@ -233,6 +228,10 @@ public class ExcelWriterService implements IExcelWriterService {
 	}
 	private Map<String, CellStyle> createStyles(Workbook wb){
 		Map<String, CellStyle> mapStyles = new HashMap<>();
+	
+		XSSFColor pink = new XSSFColor(HexFormat.of().parseHex("ead1dc"));
+		XSSFColor blue = new XSSFColor(HexFormat.of().parseHex("3c78d8"));
+		XSSFColor yellow = new XSSFColor(HexFormat.of().parseHex("fcba03"));
 		
 		//Green Style (positives)
 		CellStyle posPct = wb.createCellStyle();
@@ -243,7 +242,7 @@ public class ExcelWriterService implements IExcelWriterService {
 		posPct.setBorderTop(BorderStyle.THIN);
 		posPct.setBorderLeft(BorderStyle.THIN);
 		posPct.setBorderRight(BorderStyle.THIN);
-		posPct.setFillForegroundColor(IndexedColors.TAN.getIndex());
+		posPct.setFillForegroundColor(pink);
 		posPct.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 		mapStyles.put("percent_positive", posPct);
 		
@@ -256,7 +255,7 @@ public class ExcelWriterService implements IExcelWriterService {
 		negPct.setBorderTop(BorderStyle.THIN);
 		negPct.setBorderLeft(BorderStyle.THIN);
 		negPct.setBorderRight(BorderStyle.THIN);
-		negPct.setFillForegroundColor(IndexedColors.TAN.getIndex());
+		negPct.setFillForegroundColor(pink);
 		negPct.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 		mapStyles.put("percent_negative", negPct);
 		
@@ -301,6 +300,31 @@ public class ExcelWriterService implements IExcelWriterService {
 		dividendCell.setBorderRight(BorderStyle.THIN);
 				
 		mapStyles.put("dividend_cell", dividendCell);
+		
+		//Header cell
+		CellStyle headerCell = wb.createCellStyle();
+		Font whiteFont = wb.createFont();
+		whiteFont.setColor(IndexedColors.WHITE.getIndex());
+		headerCell.setFont(whiteFont);
+		headerCell.setFillForegroundColor(blue);
+		headerCell.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+		headerCell.setBorderBottom(BorderStyle.THIN);
+		headerCell.setBorderTop(BorderStyle.THIN);
+		headerCell.setBorderLeft(BorderStyle.THIN);
+		headerCell.setBorderRight(BorderStyle.THIN);
+						
+		mapStyles.put("header_cell", headerCell);
+		
+		//Pink cell
+		CellStyle pinkCell = wb.createCellStyle();
+		pinkCell.setFillForegroundColor(pink);
+		pinkCell.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+		pinkCell.setBorderBottom(BorderStyle.THIN);
+		pinkCell.setBorderTop(BorderStyle.THIN);
+		pinkCell.setBorderLeft(BorderStyle.THIN);
+		pinkCell.setBorderRight(BorderStyle.THIN);
+						
+		mapStyles.put("pink_cell", pinkCell);
 		
 		return mapStyles;
 	}

@@ -11,6 +11,7 @@ import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.util.CellReference;
 
 import app.dividends.domain.model.Dividend;
+import app.dividends.domain.model.ExcelColumns;
 import app.dividends.domain.model.Position;
 
 public class ExcelColumnConfig {
@@ -22,21 +23,20 @@ public class ExcelColumnConfig {
 	static {
 		
 		// -----STRINGS-------
-		COLUMNS.put("Ticker", (cell, pos, styles, year) -> cell.setCellValue(pos.getTicker()));
+		COLUMNS.put(ExcelColumns.TICKER.getNombre(), (cell, pos, styles, year) -> cell.setCellValue(pos.getTicker()));
 		
 		//------INTEGER----
-		COLUMNS.put("Cantidad", (cell, pos, styles, year) -> cell.setCellValue(pos.getQuantity()));
+		COLUMNS.put(ExcelColumns.CANTIDAD.getNombre(), (cell, pos, styles, year) -> cell.setCellValue(pos.getQuantity()));
 		
 		//------BIGDECIMALS----
-		COLUMNS.put("Precio Medio", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getAverageCost(), RoundingMode.DOWN)));
-		COLUMNS.put("Dividendos", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalDividends(), RoundingMode.HALF_UP)));
-		COLUMNS.put("Precio Actual", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getCurrentValue(), RoundingMode.HALF_UP)));
-		COLUMNS.put("Precio total", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalCostEUR(), RoundingMode.HALF_UP)));
-		COLUMNS.put("Valor Actual Total", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalValue(), RoundingMode.HALF_UP)));
-		COLUMNS.put("Rentabilidad", (cell, pos, styles, year) -> setStyle(scale(pos.getPercentatgeProfit(), RoundingMode.HALF_UP), styles, cell));
-		COLUMNS.put("Beneficios + Dividendos", (cell, pos, styles, year) -> setStyle(scale(pos.getTotalProfitWithDividends(), RoundingMode.HALF_UP), styles, cell));
-		COLUMNS.put("Precio Actual + Dividendos", (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalValueWitDividends(), RoundingMode.HALF_UP)));
-		COLUMNS.put("Rentabilidad + Dividendos", (cell, pos, styles, year) -> setStyle(scale(pos.getPercentatgeProfitWithDividends(), RoundingMode.HALF_UP), styles, cell));
+		COLUMNS.put(ExcelColumns.PRECIOMEDIO.getNombre(), (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getAverageCost(), RoundingMode.DOWN)));
+		COLUMNS.put(ExcelColumns.INGRESOSDIVI.getNombre(), (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalDividends(), RoundingMode.HALF_UP)));
+		COLUMNS.put(ExcelColumns.PRECIOACTUAL.getNombre(), (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getCurrentValue(), RoundingMode.HALF_UP)));
+		COLUMNS.put(ExcelColumns.COSTE.getNombre(), (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalCostEUR(), RoundingMode.HALF_UP)));
+		COLUMNS.put(ExcelColumns.VALORACTUAL.getNombre(), (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalValue(), RoundingMode.HALF_UP)));
+		COLUMNS.put(ExcelColumns.RENTABILIDADSINDIVI.getNombre(), (cell, pos, styles, year) -> setProfitStyle(scale(pos.getPercentatgeProfit(), RoundingMode.HALF_UP), styles, cell));
+		COLUMNS.put(ExcelColumns.VALORDIVI.getNombre(), (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalValueWitDividends(), RoundingMode.HALF_UP)));
+		COLUMNS.put(ExcelColumns.RENTABILIDAD.getNombre(), (cell, pos, styles, year) -> setProfitStyle(scale(pos.getPercentatgeProfitWithDividends(), RoundingMode.HALF_UP), styles, cell));
 		
 		//-----------MONTHS----
 		COLUMNS.put("Enero", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 1)), cell, styles));
@@ -68,7 +68,7 @@ public class ExcelColumnConfig {
         return value.setScale(DECIMAL_PLACES, mode).doubleValue();
 	}
 	
-	private static void setStyle(Double value, Map<String, CellStyle> styles, Cell cell) {
+	private static void setProfitStyle(Double value, Map<String, CellStyle> styles, Cell cell) {
 		if(value >= 0) {
 			cell.setCellStyle(styles.get("percent_positive"));
 		}else {
@@ -76,6 +76,17 @@ public class ExcelColumnConfig {
 		}
 		cell.setCellValue(value);
 	}
+	
+	//VAS POR AQUI CARA ALCACHOFA
+	private static void setCostStyle(Double value, Map<String, CellStyle> styles, Cell cell) {
+		if(value >= 0) {
+			cell.setCellStyle(styles.get("percent_positive"));
+		}else {
+			cell.setCellStyle(styles.get("percent_negative"));
+		}
+		cell.setCellValue(value);
+	}
+	
 	
 	private static BigDecimal processDividend(Position pos, YearMonth period) {
 	    return pos.findDividendByDate(period)

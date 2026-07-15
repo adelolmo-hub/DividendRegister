@@ -4,8 +4,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 @Data
+@Slf4j
 public class Portfolio {
 
 	private List<Position> positions;
@@ -14,6 +16,7 @@ public class Portfolio {
 	private BigDecimal totalProfit;
 	private BigDecimal totalProfitWithDividends;
 	private BigDecimal totalDividends;
+	private BigDecimal totalCost;
 	
 	public Portfolio(List<Position> positions) {
 		this.positions = positions;
@@ -22,8 +25,8 @@ public class Portfolio {
 
 	private void calculateMetrics() {
 		this.totalValue = BigDecimal.ZERO;
-	    BigDecimal totalCost = BigDecimal.ZERO;
 	    this.totalDividends = BigDecimal.ZERO;
+	    this.totalCost = BigDecimal.ZERO;
 
 	    for (Position position : this.positions) {
 	    	boolean qtyNotZero = position.getQuantity() > 0;
@@ -31,7 +34,8 @@ public class Portfolio {
 	            this.totalValue = this.totalValue.add(position.getTotalValue());
 	        }
 	        if (position.getTotalCost() != null && qtyNotZero) {
-	            totalCost = totalCost.add(position.getTotalCost());
+	            this.totalCost = totalCost.add(position.getTotalCostEUR());
+	            log.info("Ticker: " + position.getTicker() + " | Sumando: " + position.getTotalCostEUR() +" | Total acumulado después: " + this.totalCost);
 	        }
 	        if (position.getTotalDividends() != null) {
 	            this.totalDividends = this.totalDividends.add(position.getTotalDividends());
