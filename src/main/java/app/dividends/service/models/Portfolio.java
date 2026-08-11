@@ -1,6 +1,7 @@
 package app.dividends.service.models;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 import lombok.Data;
@@ -17,6 +18,8 @@ public class Portfolio {
 	private BigDecimal totalProfitWithDividends;
 	private BigDecimal totalDividends;
 	private BigDecimal totalCost;
+	private BigDecimal totalProfitPctg;
+	private BigDecimal totalProfitWithDividendsPctg;
 	
 	public Portfolio(List<Position> positions) {
 		this.positions = positions;
@@ -49,5 +52,18 @@ public class Portfolio {
 
 	    
 	    this.totalProfitWithDividends = this.totalProfit.add(this.totalDividends);
+	    
+	    this.totalProfitPctg = this.totalValue.subtract(totalCost)
+	    		.divide(totalCost, 4, RoundingMode.HALF_EVEN)
+	    		.multiply(BigDecimal.valueOf(100));
+	    
+	    log.info("Total value: " + totalValue + " | Total Cost: " + totalCost + "Value: " + totalProfitPctg);
+	    
+	    this.totalProfitWithDividendsPctg = this.totalValue.add(totalDividends)
+	    		.subtract(totalCost)
+	    		.divide(totalCost, 4, RoundingMode.HALF_EVEN)
+	    		.multiply(BigDecimal.valueOf(100));
+	    
+	    log.info("Total value: " + totalValue + " | Total Cost: " + totalCost + " Total Dividends: " + totalDividends +"Value: " + totalProfitPctg);
 	}
 }

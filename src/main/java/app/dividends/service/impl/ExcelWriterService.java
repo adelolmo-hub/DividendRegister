@@ -38,6 +38,7 @@ import app.dividends.service.models.Position;
 public class ExcelWriterService implements IExcelWriterService {
 
 	private final int ROW_OFFSET = 2;
+	private final int ROW_OFFSET_PROFIT_VALUES = 3;
 	private final int COLUMN_OFFSET = 1;
 	private final int HEADER_OFFSET = 1;
 	private final int TABLE_OFFSET = 2;
@@ -112,16 +113,40 @@ public class ExcelWriterService implements IExcelWriterService {
 				}
 			}
 		}
-		Row row = sheet.createRow(rowCount + 2);
+		Row row = sheet.createRow(rowCount + ROW_OFFSET);
 		for (int i = 0; i < headerValues.length; i++) {
 			Cell cell = row.createCell(i + COLUMN_OFFSET);
 			setTotalValuesCell(cell, headerValues[i], portfolio, styles);
 		}
+		rowCount++;
+		//provisional
+		writeProfitValuesFooter(portfolio, styles, sheet, rowCount);
+	}
+
+
+	private void writeProfitValuesFooter(Portfolio portfolio, Map<String, CellStyle> styles, Sheet sheet,
+			int rowCount) {
+		
+		int currentRow = rowCount + ROW_OFFSET_PROFIT_VALUES;
+		
+		//Normal Profit
+		Row row = sheet.createRow(currentRow);
+		Cell textCell = row.createCell(COLUMN_OFFSET);
+		Cell cellProfit = row.createCell(COLUMN_OFFSET + 1);
+		textCell.setCellValue("Beneficio sin Divs");
+		textCell.setCellStyle(styles.get("light_green_background"));
+		setTotalValuesCell(cellProfit, "profit", portfolio, styles);
+		
+		//ProfitWithDivs
+		currentRow++;
+		row = sheet.createRow(currentRow);
+		textCell = row.createCell(COLUMN_OFFSET);
+		cellProfit = row.createCell(COLUMN_OFFSET + 1);
+		textCell.setCellValue("Beneficio bruto");
+		textCell.setCellStyle(styles.get("light_green_background"));
+		setTotalValuesCell(cellProfit, "profitwithdivs", portfolio, styles);
 	}
 	
-
-
-
 	private void writeDividendSheet(List<Position> positions, Map<String, CellStyle> styles, Sheet sheet, String[] headerValues) {
 		int rowCount = 0;
 		for(int k = STARTER_YEAR; k <= CURRENT_YEAR; k++) {
@@ -220,6 +245,14 @@ public class ExcelWriterService implements IExcelWriterService {
 				cell.setCellValue(portfolio.getTotalValueWithDividends().doubleValue());
 				cell.setCellStyle(styles.get("percent_positive"));
 				break;
+			case "profit":
+				cell.setCellValue(portfolio.getTotalProfitPctg().doubleValue());
+				cell.setCellStyle(styles.get("percent_positive"));
+				break;
+			case "profitwithdivs":
+					cell.setCellValue(portfolio.getTotalProfitWithDividendsPctg().doubleValue());
+					cell.setCellStyle(styles.get("percent_positive"));
+					break;
 			default:
 				break;
 		}
