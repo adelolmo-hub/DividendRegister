@@ -49,6 +49,7 @@ public class PortfolioService implements IPortfolioService{
 		}
 			
 		Map<String, List<AbstractTransaction>> groupedByTicker = allTransactions.stream()
+					.filter(tx -> tx.getTicker() != null && !tx.getTicker().isBlank())
 					.collect(Collectors.groupingBy(AbstractTransaction::getTicker));
 			
 		List<Position> calculatedPositions = groupedByTicker.entrySet().stream()
@@ -56,7 +57,8 @@ public class PortfolioService implements IPortfolioService{
 						String ticker = entry.getKey();
 						List<AbstractTransaction> txs = entry.getValue();
 						
-						BigDecimal exchangeRate = marketDataService.getExchangeRate(txs.get(0).getCurrency());
+						String currency = txs.get(0).getCurrency();
+						BigDecimal exchangeRate = marketDataService.getExchangeRate(currency);
 						
 						TickerInformation t = tickerInfoRepo.findByTicker(ticker);
 						BigDecimal currentAssetValue = BigDecimal.ZERO;

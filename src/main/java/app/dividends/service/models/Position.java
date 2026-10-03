@@ -54,6 +54,9 @@ public class Position {
 	}
 	
 	public Optional<Dividend> findDividendByDate(YearMonth yearMonth) {
+		if (dividendsRecieved == null) {
+			return Optional.empty();
+		}
 		return dividendsRecieved.stream()
 	            .filter(d -> d.isOcurredAt(yearMonth))
 	            .findFirst();
@@ -65,38 +68,50 @@ public class Position {
 	}
 
 	public void buyOrder(int quantity, BigDecimal price, BigDecimal commission, BigDecimal exchangeRate) {
-		
+		BigDecimal safeCommission = commission == null ? BigDecimal.ZERO : commission.abs();
+		BigDecimal rate = exchangeRate == null ? BigDecimal.ONE : exchangeRate;
 		
 		this.quantity += quantity;
 		this.totalCost = totalCost.add(price.multiply(BigDecimal.valueOf(quantity)));
-		this.totalCost = totalCost.add(commission.abs());
-		this.totalCostEUR = totalCost.multiply(exchangeRate);
+		this.totalCost = totalCost.add(safeCommission);
+		this.totalCostEUR = totalCost.multiply(rate);
 		
 		this.averageCost = totalCost.divide(BigDecimal.valueOf(this.quantity), 8, RoundingMode.HALF_EVEN);
-		this.averageCostEUR = averageCost.multiply(exchangeRate);
+		this.averageCostEUR = averageCost.multiply(rate);
 	}
 
 	public void sellOrder(int quantity, BigDecimal price, BigDecimal commission, BigDecimal exchangeRate) {
-		
-		if (this.quantity >= quantity) {
-			this.quantity -= quantity;
-			
-			//El coste medio no varia al vender pero el total si. Se actualiza el total en base a las acciones que quedan
-			this.totalCost = this.averageCost.multiply(BigDecimal.valueOf(this.quantity));
-			this.totalCostEUR = totalCost.multiply(exchangeRate);
-			
-			BigDecimal commissionEUR = commission.abs().multiply(exchangeRate);
-			BigDecimal profitEUR = price.subtract(this.averageCost)
-	                .multiply(BigDecimal.valueOf(quantity))
-	                .multiply(exchangeRate)
-	                .subtract(commissionEUR);
-			this.realizedGains = this.realizedGains.add(profitEUR);
+		if (this.quantity < quantity) {
+			return;
+		}
+
+		BigDecimal safeCommission = commission == null ? BigDecimal.ZERO : commission.abs();
+		BigDecimal rate = exchangeRate == null ? BigDecimal.ONE : exchangeRate;
+		BigDecimal commissionEUR = safeCommission.multiply(rate);
+		BigDecimal profitEUR = price.subtract(this.averageCost)
+				.multiply(BigDecimal.valueOf(quantity))
+				.multiply(rate)
+				.subtract(commissionEUR);
+		this.realizedGains = this.realizedGains.add(profitEUR);
+
+		this.quantity -= quantity;
+		if (this.quantity == 0) {
+			this.totalCost = BigDecimal.ZERO;
+			this.totalCostEUR = BigDecimal.ZERO;
+			this.averageCost = BigDecimal.ZERO;
+			this.averageCostEUR = BigDecimal.ZERO;
+		} else {
+			this.totalCost = this.averageCost.multiply(BigDecimal.valueOf(this.quantity)).stripTrailingZeros();
+			this.totalCostEUR = totalCost.multiply(rate);
 		}
 	}
 	
 	public BigDecimal getTotalDividends() {
-		return  dividendsRecieved.stream()
-                .map(Dividend::getTotalReceivedEUR)
+		if (dividendsRecieved == null) {
+			return BigDecimal.ZERO;
+		}
+		return dividendsRecieved.stream()
+                .map(d -> d.getTotalReceivedEUR() != null ? d.getTotalReceivedEUR() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 	
@@ -105,27 +120,23 @@ public class Position {
 	}
 	
 	public BigDecimal getPercentatgeProfit() {
-		if(currentValue.compareTo(BigDecimal.ZERO) != 0 && quantity > 0) {
-			
-            return currentValue.subtract(averageCost)
-                  .divide(averageCost, 4, RoundingMode.HALF_EVEN)
-                  .multiply(new BigDecimal("100"))
-                  .setScale(2, RoundingMode.HALF_EVEN);
+		if (averageCost.compareTo(BigDecimal.ZERO) == 0 || quantity <= 0) {
+			return BigDecimal.ZERO;
 		}
-		return BigDecimal.ZERO;
+		return currentValue.subtract(averageCost)
+				.divide(averageCost, 4, RoundingMode.HALF_EVEN)
+				.multiply(new BigDecimal("100"))
+				.setScale(2, RoundingMode.HALF_EVEN);
 	}
 	
 	public BigDecimal getPercentatgeProfitWithDividends() {
-			if(currentValue.compareTo(BigDecimal.ZERO) != 0 && quantity > 0) {
-			
-				//Se descuadran cuando no es EUR
-				return this.getTotalProfitWithDividends()
-		        		.divide(totalCostEUR, 4, RoundingMode.HALF_EVEN)
-		                .multiply(new BigDecimal("100"))
-		                .setScale(2, RoundingMode.HALF_EVEN);
+		if (totalCostEUR.compareTo(BigDecimal.ZERO) == 0 || quantity <= 0) {
+			return BigDecimal.ZERO;
 		}
-		return BigDecimal.ZERO;
-		  
+		return this.getTotalProfitWithDividends()
+				.divide(totalCostEUR, 4, RoundingMode.HALF_EVEN)
+				.multiply(new BigDecimal("100"))
+				.setScale(2, RoundingMode.HALF_EVEN);
 	}
 
 	public BigDecimal getTotalProfit() {
@@ -145,15 +156,15 @@ public class Position {
                     .multiply(BigDecimal.valueOf(quantity))
                     .setScale(2, RoundingMode.HALF_EVEN);
 		}
-		return BigDecimal.ZERO;
+		return realizedGains;
 	}
 	
 	public BigDecimal getTotalProfitWithDividends() {
-			if(currentValue.compareTo(BigDecimal.ZERO) != 0 && quantity > 0) {
-				return getTotalProfitEUR().add(getTotalDividends())
-						.setScale(2, RoundingMode.HALF_EVEN);
-			}
-			return BigDecimal.ZERO;
+		if (currentValue.compareTo(BigDecimal.ZERO) != 0 && quantity > 0) {
+			return getTotalProfitEUR().add(getTotalDividends())
+					.setScale(2, RoundingMode.HALF_EVEN);
+		}
+		return realizedGains.add(getTotalDividends());
 	}
 	
 	public BigDecimal getTotalValueWitDividends() {

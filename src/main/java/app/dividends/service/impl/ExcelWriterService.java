@@ -1,7 +1,6 @@
 package app.dividends.service.impl;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.Year;
@@ -39,6 +38,7 @@ public class ExcelWriterService implements IExcelWriterService {
 
 	private final int ROW_OFFSET = 2;
 	private final int ROW_OFFSET_PROFIT_VALUES = 3;
+	private final int ROW_OFFSET_SOLD_POSITIONS = 3;
 	private final int COLUMN_OFFSET = 1;
 	private final int HEADER_OFFSET = 1;
 	private final int TABLE_OFFSET = 2;
@@ -58,50 +58,55 @@ public class ExcelWriterService implements IExcelWriterService {
 	
 	@Override
 	public String writePortfolio() {
-		Workbook workbook = new XSSFWorkbook();
-
-		Portfolio portfolio = portfolioService.calculatePortfolio();
-		List<Position> positions = portfolio.getPositions();
-		
-		Map<String, CellStyle> styles = createStyles(workbook);
-		
-		Sheet portfolioSheet = workbook.createSheet("Portfolio");
-		Sheet dividendSheet = workbook.createSheet("Dividendos");
-		
-		writeSheet(portfolio, styles, portfolioSheet, portfolioHeaderValues);
-		writeDividendSheet(positions, styles, dividendSheet, dividendHeaderValues);
-		
-		File currDir = new File(".");
-		String path = currDir.getAbsolutePath();
-		String fileLocation = path.substring(0, path.length() - 1) + FILE_NAME;
-		
-		try {
+		try (Workbook workbook = new XSSFWorkbook()) {
+			Portfolio portfolio = portfolioService.calculatePortfolio();
+			List<Position> positions = portfolio.getPositions();
+			
+			Map<String, CellStyle> styles = createStyles(workbook);
+			
+			Sheet portfolioSheet = workbook.createSheet("Portfolio");
+			Sheet dividendSheet = workbook.createSheet("Dividendos");
+			
+			writeSheet(portfolio, styles, portfolioSheet, portfolioHeaderValues);
+			writeDividendSheet(positions, styles, dividendSheet, dividendHeaderValues);
+			
+			File currDir = new File(".");
+			String path = currDir.getAbsolutePath();
+			String fileLocation = path.substring(0, path.length() - 1) + FILE_NAME;
+			
 			autoSizeColumns(portfolioSheet);
 			autoSizeColumns(dividendSheet);
-			FileOutputStream outputStream = new FileOutputStream(fileLocation);
-			workbook.write(outputStream);
-			workbook.close();
-			outputStream.close();
-		} catch (FileNotFoundException e) {
-			return e.getMessage();
+			try (FileOutputStream outputStream = new FileOutputStream(fileLocation)) {
+				workbook.write(outputStream);
+			}
+			return "Done!";
 		} catch (IOException e) {
-			return e.getMessage();
+			throw new IllegalStateException("No se pudo generar el Excel: " + e.getMessage(), e);
 		}
-		return "Done!";
 	}
 
 
 	private void writeSheet(Portfolio portfolio, Map<String, CellStyle> styles, Sheet sheet, String[] headerValues) {
 		Row header = sheet.createRow(HEADER_OFFSET);
 		int rowCount = 0;
+		int rowCountSoldPositions = 0;
 		
 		List<Position> positions = portfolio.getPositions();
 		
 		writeHeader(header, headerValues, styles);
 		
-		for (rowCount = 0; rowCount < positions.size(); rowCount++) {
-			Position position = positions.get(rowCount);
-			Row row = sheet.createRow(rowCount + ROW_OFFSET);
+		for (int i = 0; i < positions.size(); i++) {
+			Position position = positions.get(i);
+			
+			if(position.getQuantity() == 0) {
+				Row row = getOrCreateRow(sheet, rowCountSoldPositions + ROW_OFFSET);
+				Cell cell = row.createCell(COLUMN_OFFSET * 3 + headerValues.length);
+				cell.setCellValue(position.getTicker());
+				rowCountSoldPositions++;
+				continue;
+			}
+			
+			Row row = getOrCreateRow(sheet, rowCount + ROW_OFFSET);
 			for (int j = 0; j < headerValues.length; j++) {
 				Cell cell = row.createCell(j + COLUMN_OFFSET);
 				setAlternateColorBackground(cell, rowCount, styles);
@@ -112,7 +117,9 @@ public class ExcelWriterService implements IExcelWriterService {
 					cell.setCellValue("");
 				}
 			}
+			rowCount++;
 		}
+		
 		Row row = sheet.createRow(rowCount + ROW_OFFSET);
 		for (int i = 0; i < headerValues.length; i++) {
 			Cell cell = row.createCell(i + COLUMN_OFFSET);
@@ -190,6 +197,12 @@ public class ExcelWriterService implements IExcelWriterService {
 	private void writeHeader(Row header, String[] headerValues, Map<String, CellStyle> styles) {
 		for (int i = 0; i < headerValues.length; i++) {
 			Cell cell = header.createCell(i + COLUMN_OFFSET);
+			cell.setCellValue(headerValues[i]);
+			cell.setCellStyle(styles.get("header_cell"));
+		}
+		
+		for (int i = 0; i < headerValues.length; i++) {
+			Cell cell = header.createCell(i + COLUMN_OFFSET + ROW_OFFSET_SOLD_POSITIONS + headerValues.length);
 			cell.setCellValue(headerValues[i]);
 			cell.setCellStyle(styles.get("header_cell"));
 		}
@@ -359,5 +372,13 @@ public class ExcelWriterService implements IExcelWriterService {
 		mapStyles.put("pink_cell", pinkCell);
 		
 		return mapStyles;
+	}
+	
+	private Row getOrCreateRow(Sheet sheet, int rowIndex) {
+	    Row row = sheet.getRow(rowIndex);
+	    if (row == null) {
+	        row = sheet.createRow(rowIndex);
+	    }
+	    return row;
 	}
 }

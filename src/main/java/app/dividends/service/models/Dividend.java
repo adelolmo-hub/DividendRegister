@@ -2,6 +2,7 @@ package app.dividends.service.models;
 
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.Date;
@@ -18,9 +19,13 @@ public class Dividend {
     private final BigDecimal amountPerAsset;
     private final BigDecimal totalReceivedEUR;
 	
-	public boolean isOcurredAt(YearMonth targetDate) {	
-		return YearMonth.from(date.toInstant()
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate()).equals(targetDate);
+	public boolean isOcurredAt(YearMonth targetDate) {
+		if (date == null || targetDate == null) {
+			return false;
+		}
+		// java.sql.Date.toInstant() lanza UnsupportedOperationException
+		return YearMonth.from(Instant.ofEpochMilli(date.getTime())
+				.atZone(ZoneId.systemDefault())
+				.toLocalDate()).equals(targetDate);
 	}
 }

@@ -17,11 +17,13 @@ public class DividendTransaction extends AbstractTransaction{
 	
 	@Override
 	public void applyTo(Position position, BigDecimal exchangeRate) {
+		 BigDecimal received = this.getAmountReceived() != null ? this.getAmountReceived() : BigDecimal.ZERO;
+		 BigDecimal rate = exchangeRate != null ? exchangeRate : BigDecimal.ONE;
 		 Dividend d = new Dividend(
 		    this.getDate(),
 		    this.getCurrency(),
 		    this.getAmountReceivedByAsset(),
-		    this.getAmountReceived().multiply(exchangeRate)
+		    received.multiply(rate)
 		    );
 		 position.addDividend(d);
 	}

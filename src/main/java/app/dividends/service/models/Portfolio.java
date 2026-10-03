@@ -47,12 +47,15 @@ public class Portfolio {
 
 	    this.totalValueWithDividends = this.totalValue.add(this.totalDividends);
 
-	    
 	    this.totalProfit = this.totalValue.subtract(totalCost);
-
-	    
 	    this.totalProfitWithDividends = this.totalProfit.add(this.totalDividends);
-	    
+
+	    if (this.totalCost.compareTo(BigDecimal.ZERO) == 0) {
+	    	this.totalProfitPctg = BigDecimal.ZERO;
+	    	this.totalProfitWithDividendsPctg = BigDecimal.ZERO;
+	    	return;
+	    }
+
 	    this.totalProfitPctg = this.totalValue.subtract(totalCost)
 	    		.divide(totalCost, 4, RoundingMode.HALF_EVEN)
 	    		.multiply(BigDecimal.valueOf(100));

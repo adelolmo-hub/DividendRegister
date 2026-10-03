@@ -8,7 +8,9 @@ public class DataExtractor{
 	public record ExtractionResult(String ticker, String price) {}
 	
 	public ExtractionResult extractDataFromCsv(String dirtyString, String currency) {
-		
+		if (dirtyString == null || currency == null) {
+			return null;
+		}
 		Pattern CSV_PATTERN = Pattern.compile(String.format(CSV_REGEX, currency));
 		Matcher matcher = CSV_PATTERN.matcher(dirtyString);
 		

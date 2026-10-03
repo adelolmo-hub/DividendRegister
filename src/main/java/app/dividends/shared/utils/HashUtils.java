@@ -18,13 +18,14 @@ public class HashUtils {
         return hexString.toString();
     }
 	
-	 public static String hashSHA256(String input) throws NoSuchAlgorithmException {
-	       
-	        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-
-	        byte[] encodedhash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
-
-	        return bytesToHex(encodedhash);
+	 public static String hashSHA256(String input) {
+	        try {
+	            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+	            byte[] encodedhash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+	            return bytesToHex(encodedhash);
+	        } catch (NoSuchAlgorithmException e) {
+	            throw new IllegalStateException("SHA-256 no está disponible en esta JVM", e);
+	        }
 	    }
 	
 }

@@ -1,6 +1,5 @@
 package app.dividends.service.models;
 
-import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 
 import app.dividends.shared.utils.HashUtils;
@@ -13,11 +12,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
 import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
 import jakarta.persistence.UniqueConstraint;
 
 @Entity
 @Table(name = "transactions", uniqueConstraints = {
-		@UniqueConstraint(columnNames = "external_id")
+		@UniqueConstraint(columnNames = "externalId")
 })
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "type")
@@ -27,16 +28,22 @@ public abstract class AbstractTransaction implements Transaction{
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	
-	@Column(name = "externalId", nullable = false)
+	@Column(name = "externalId", nullable = false, unique = true)
 	String externalId;
 	
 	String ticker;
 	String currency;
+
+	@Temporal(TemporalType.TIMESTAMP)
 	Date date;
 	
-	public String calculateId() throws NoSuchAlgorithmException {
+	public String calculateId() {
 		String raw = String.format("%s|%s", date, ticker);
 		return HashUtils.hashSHA256(raw);
+	}
+
+	public Long getId() {
+		return id;
 	}
 
 	public String getTicker() {

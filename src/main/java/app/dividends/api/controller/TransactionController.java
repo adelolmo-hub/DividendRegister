@@ -1,6 +1,5 @@
 package app.dividends.api.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,30 +19,34 @@ import app.dividends.service.models.Portfolio;
 @RequestMapping("/api")
 public class TransactionController {
 
-	@Autowired
-	IFileImportUseCase fileImportUseCase;
-	
-	@Autowired
-	IPortfolioService portfolioService;
-	
-	@Autowired
-	IExcelWriterService excelService;
+	private final IFileImportUseCase fileImportUseCase;
+	private final IPortfolioService portfolioService;
+	private final IExcelWriterService excelService;
+
+	public TransactionController(
+			IFileImportUseCase fileImportUseCase,
+			IPortfolioService portfolioService,
+			IExcelWriterService excelService) {
+		this.fileImportUseCase = fileImportUseCase;
+		this.portfolioService = portfolioService;
+		this.excelService = excelService;
+	}
 	
 	@PostMapping("/uploadFile")
 	public ResponseEntity<ImportReport> uploadFile(
 			@RequestParam("file") MultipartFile file,
 			@RequestParam("format") String format) {
 		ImportReport importReport = fileImportUseCase.importFile(file, format);
-		return new ResponseEntity<ImportReport>(importReport, HttpStatus.OK);
+		return ResponseEntity.ok(importReport);
 	}
 	
 	@GetMapping("/positions")
 	public ResponseEntity<Portfolio> getPositions() {
-		return new ResponseEntity<Portfolio>(portfolioService.calculatePortfolio(), HttpStatus.OK);
+		return ResponseEntity.ok(portfolioService.calculatePortfolio());
 	}
 	
 	@GetMapping("/getExcel")
-	public String getExcel() {
-		return excelService.writePortfolio();
+	public ResponseEntity<String> getExcel() {
+		return new ResponseEntity<>(excelService.writePortfolio(), HttpStatus.OK);
 	}
 }
