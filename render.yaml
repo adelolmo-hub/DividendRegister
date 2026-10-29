@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: dividend-register-api
+    env: native
+    region: frankfurt
+    plan: free
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/*.jar
