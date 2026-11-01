@@ -1,6 +1,8 @@
 package app.dividends.api.controller;
 
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,7 +48,11 @@ public class TransactionController {
 	}
 	
 	@GetMapping("/getExcel")
-	public ResponseEntity<String> getExcel() {
-		return new ResponseEntity<>(excelService.writePortfolio(), HttpStatus.OK);
+	public ResponseEntity<byte[]> getExcel() {
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+				.header(HttpHeaders.CONTENT_DISPOSITION,
+						ContentDisposition.attachment().filename("portfolio.xlsx").build().toString())
+				.body(excelService.writePortfolio());
 	}
 }
