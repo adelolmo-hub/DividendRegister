@@ -1,7 +1,6 @@
 package app.dividends.service.impl;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.Year;
 import java.util.HashMap;
@@ -51,14 +50,12 @@ public class ExcelWriterService implements IExcelWriterService {
 	private final String[] dividendHeaderValues = new String[] 
 			{"Ticker","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "Total", "Yield"};
 	
-	private final String FILE_NAME = "portfolio.xlsx";
-	
 	@Autowired
 	private IPortfolioService portfolioService;
 	
 	@Override
-	public String writePortfolio() {
-		try (Workbook workbook = new XSSFWorkbook()) {
+	public byte[] writePortfolio() {
+		try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 			Portfolio portfolio = portfolioService.calculatePortfolio();
 			List<Position> positions = portfolio.getPositions();
 			
@@ -70,16 +67,10 @@ public class ExcelWriterService implements IExcelWriterService {
 			writeSheet(portfolio, styles, portfolioSheet, portfolioHeaderValues);
 			writeDividendSheet(positions, styles, dividendSheet, dividendHeaderValues);
 			
-			File currDir = new File(".");
-			String path = currDir.getAbsolutePath();
-			String fileLocation = path.substring(0, path.length() - 1) + FILE_NAME;
-			
 			autoSizeColumns(portfolioSheet);
 			autoSizeColumns(dividendSheet);
-			try (FileOutputStream outputStream = new FileOutputStream(fileLocation)) {
-				workbook.write(outputStream);
-			}
-			return "Done!";
+			workbook.write(outputStream);
+			return outputStream.toByteArray();
 		} catch (IOException e) {
 			throw new IllegalStateException("No se pudo generar el Excel: " + e.getMessage(), e);
 		}
