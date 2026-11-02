@@ -2,7 +2,9 @@ package app.dividends.service.impl;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.Year;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
@@ -47,6 +49,9 @@ public class ExcelWriterService implements IExcelWriterService {
 	
 	private final String[] portfolioHeaderValues = ExcelColumns.getHeaders();
 	
+	private final String[] soldHeaderValues = new String[]
+			{"Ticker", "Ganancias realizadas", "Dividendos Cobrados", "Beneficio total"};
+	
 	private final String[] dividendHeaderValues = new String[] 
 			{"Ticker","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "Total", "Yield"};
 	
@@ -67,8 +72,10 @@ public class ExcelWriterService implements IExcelWriterService {
 			writeSheet(portfolio, styles, portfolioSheet, portfolioHeaderValues);
 			writeDividendSheet(positions, styles, dividendSheet, dividendHeaderValues);
 			
-			autoSizeColumns(portfolioSheet);
-			autoSizeColumns(dividendSheet);
+			int soldStartCol = COLUMN_OFFSET + portfolioHeaderValues.length + ROW_OFFSET_SOLD_POSITIONS;
+			autoSizeColumns(portfolioSheet, COLUMN_OFFSET, portfolioHeaderValues.length);
+			autoSizeColumns(portfolioSheet, soldStartCol, soldHeaderValues.length);
+			autoSizeColumns(dividendSheet, COLUMN_OFFSET, dividendHeaderValues.length);
 			workbook.write(outputStream);
 			return outputStream.toByteArray();
 		} catch (IOException e) {
@@ -81,44 +88,70 @@ public class ExcelWriterService implements IExcelWriterService {
 		Row header = sheet.createRow(HEADER_OFFSET);
 		int rowCount = 0;
 		int rowCountSoldPositions = 0;
+		int soldStartCol = COLUMN_OFFSET + headerValues.length + ROW_OFFSET_SOLD_POSITIONS;
 		
 		List<Position> positions = portfolio.getPositions();
+		List<Position> soldPositions = new ArrayList<>();
 		
-		writeHeader(header, headerValues, styles);
+		writeHeader(header, headerValues, styles, COLUMN_OFFSET);
+		writeHeader(header, soldHeaderValues, styles, soldStartCol);
 		
 		for (int i = 0; i < positions.size(); i++) {
 			Position position = positions.get(i);
 			
-			if(position.getQuantity() == 0) {
+			if (isSoldPosition(position)) {
 				Row row = getOrCreateRow(sheet, rowCountSoldPositions + ROW_OFFSET);
-				Cell cell = row.createCell(COLUMN_OFFSET * 3 + headerValues.length);
-				cell.setCellValue(position.getTicker());
+				writePositionRow(row, position, soldHeaderValues, soldStartCol, rowCountSoldPositions, styles);
+				soldPositions.add(position);
 				rowCountSoldPositions++;
 				continue;
 			}
 			
-			Row row = getOrCreateRow(sheet, rowCount + ROW_OFFSET);
-			for (int j = 0; j < headerValues.length; j++) {
-				Cell cell = row.createCell(j + COLUMN_OFFSET);
-				setAlternateColorBackground(cell, rowCount, styles);
-				ColumnProcessor processor = ExcelColumnConfig.COLUMNS.get(headerValues[j]);
-				if(processor != null) {
-					processor.process(cell, position, styles, 0);
-				}else {
-					cell.setCellValue("");
-				}
+			if (position.getQuantity() == 0) {
+				continue;
 			}
+			
+			Row row = getOrCreateRow(sheet, rowCount + ROW_OFFSET);
+			writePositionRow(row, position, headerValues, COLUMN_OFFSET, rowCount, styles);
 			rowCount++;
 		}
 		
-		Row row = sheet.createRow(rowCount + ROW_OFFSET);
+		Row row = getOrCreateRow(sheet, rowCount + ROW_OFFSET);
 		for (int i = 0; i < headerValues.length; i++) {
 			Cell cell = row.createCell(i + COLUMN_OFFSET);
 			setTotalValuesCell(cell, headerValues[i], portfolio, styles);
 		}
 		rowCount++;
-		//provisional
+		
+		if (rowCountSoldPositions > 0) {
+			Row soldTotalRow = getOrCreateRow(sheet, rowCountSoldPositions + ROW_OFFSET);
+			for (int i = 0; i < soldHeaderValues.length; i++) {
+				Cell cell = soldTotalRow.createCell(i + soldStartCol);
+				setSoldTotalValuesCell(cell, soldHeaderValues[i], soldPositions, styles);
+			}
+		}
+		
 		writeProfitValuesFooter(portfolio, styles, sheet, rowCount);
+	}
+	
+	private boolean isSoldPosition(Position position) {
+		return position.getQuantity() == 0
+				&& position.getRealizedGains() != null
+				&& position.getRealizedGains().compareTo(BigDecimal.ZERO) != 0;
+	}
+	
+	private void writePositionRow(Row row, Position position, String[] headerValues, int startColumn,
+			int rowIndexForColor, Map<String, CellStyle> styles) {
+		for (int j = 0; j < headerValues.length; j++) {
+			Cell cell = row.createCell(j + startColumn);
+			setAlternateColorBackground(cell, rowIndexForColor, styles);
+			ColumnProcessor processor = ExcelColumnConfig.COLUMNS.get(headerValues[j]);
+			if (processor != null) {
+				processor.process(cell, position, styles, 0);
+			} else {
+				cell.setCellValue("");
+			}
+		}
 	}
 
 
@@ -128,7 +161,7 @@ public class ExcelWriterService implements IExcelWriterService {
 		int currentRow = rowCount + ROW_OFFSET_PROFIT_VALUES;
 		
 		//Normal Profit
-		Row row = sheet.createRow(currentRow);
+		Row row = getOrCreateRow(sheet, currentRow);
 		Cell textCell = row.createCell(COLUMN_OFFSET);
 		Cell cellProfit = row.createCell(COLUMN_OFFSET + 1);
 		textCell.setCellValue("Beneficio sin Divs");
@@ -137,7 +170,7 @@ public class ExcelWriterService implements IExcelWriterService {
 		
 		//ProfitWithDivs
 		currentRow++;
-		row = sheet.createRow(currentRow);
+		row = getOrCreateRow(sheet, currentRow);
 		textCell = row.createCell(COLUMN_OFFSET);
 		cellProfit = row.createCell(COLUMN_OFFSET + 1);
 		textCell.setCellValue("Beneficio bruto");
@@ -149,7 +182,7 @@ public class ExcelWriterService implements IExcelWriterService {
 		int rowCount = 0;
 		for(int k = STARTER_YEAR; k <= CURRENT_YEAR; k++) {
 			Row row = sheet.createRow(rowCount + ROW_OFFSET); 
-			writeHeader(row, headerValues, styles);
+			writeHeader(row, headerValues, styles, COLUMN_OFFSET);
 			rowCount++;
 			for (int i = 0; i < positions.size(); i++) {
 				Position position = positions.get(i);
@@ -185,15 +218,9 @@ public class ExcelWriterService implements IExcelWriterService {
 	}
 
 
-	private void writeHeader(Row header, String[] headerValues, Map<String, CellStyle> styles) {
+	private void writeHeader(Row header, String[] headerValues, Map<String, CellStyle> styles, int startColumn) {
 		for (int i = 0; i < headerValues.length; i++) {
-			Cell cell = header.createCell(i + COLUMN_OFFSET);
-			cell.setCellValue(headerValues[i]);
-			cell.setCellStyle(styles.get("header_cell"));
-		}
-		
-		for (int i = 0; i < headerValues.length; i++) {
-			Cell cell = header.createCell(i + COLUMN_OFFSET + ROW_OFFSET_SOLD_POSITIONS + headerValues.length);
+			Cell cell = header.createCell(i + startColumn);
 			cell.setCellValue(headerValues[i]);
 			cell.setCellStyle(styles.get("header_cell"));
 		}
@@ -216,9 +243,9 @@ public class ExcelWriterService implements IExcelWriterService {
 		
 	}
 	
-	private void autoSizeColumns(Sheet sheet) {
-		for (int i = 0; i < portfolioHeaderValues.length; i++) {
-	        int columnIndex = i + COLUMN_OFFSET;
+	private void autoSizeColumns(Sheet sheet, int startColumn, int columnCount) {
+		for (int i = 0; i < columnCount; i++) {
+	        int columnIndex = i + startColumn;
 	        sheet.autoSizeColumn(columnIndex);
 
 	        int currentWidth = sheet.getColumnWidth(columnIndex);
@@ -261,6 +288,47 @@ public class ExcelWriterService implements IExcelWriterService {
 				break;
 		}
 		
+	}
+
+	private void setSoldTotalValuesCell(Cell cell, String value, List<Position> soldPositions, Map<String, CellStyle> styles) {
+		switch (value) {
+			case "Ticker":
+				cell.setCellValue("Total");
+				cell.setCellStyle(styles.get("percent_positive"));
+				break;
+			case "Ganancias realizadas":
+				cell.setCellValue(sumRealizedGains(soldPositions).doubleValue());
+				cell.setCellStyle(styles.get("percent_positive"));
+				break;
+			case "Dividendos Cobrados":
+				cell.setCellValue(sumDividends(soldPositions).doubleValue());
+				cell.setCellStyle(styles.get("percent_positive"));
+				break;
+			case "Beneficio total":
+				cell.setCellValue(sumTotalProfitWithDividends(soldPositions).doubleValue());
+				cell.setCellStyle(styles.get("percent_positive"));
+				break;
+			default:
+				break;
+		}
+	}
+
+	private BigDecimal sumRealizedGains(List<Position> positions) {
+		return positions.stream()
+				.map(p -> p.getRealizedGains() != null ? p.getRealizedGains() : BigDecimal.ZERO)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
+	}
+
+	private BigDecimal sumDividends(List<Position> positions) {
+		return positions.stream()
+				.map(Position::getTotalDividends)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
+	}
+
+	private BigDecimal sumTotalProfitWithDividends(List<Position> positions) {
+		return positions.stream()
+				.map(Position::getTotalProfitWithDividends)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 	private Map<String, CellStyle> createStyles(Workbook wb){
 		Map<String, CellStyle> mapStyles = new HashMap<>();
