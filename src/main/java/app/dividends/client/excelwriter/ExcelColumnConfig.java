@@ -37,6 +37,8 @@ public class ExcelColumnConfig {
 		COLUMNS.put(ExcelColumns.RENTABILIDADSINDIVI.getNombre(), (cell, pos, styles, year) -> setProfitStyle(scale(pos.getPercentatgeProfit(), RoundingMode.HALF_UP), styles, cell));
 		COLUMNS.put(ExcelColumns.VALORDIVI.getNombre(), (cell, pos, styles, year) -> cell.setCellValue(scale(pos.getTotalValueWitDividends(), RoundingMode.HALF_UP)));
 		COLUMNS.put(ExcelColumns.RENTABILIDAD.getNombre(), (cell, pos, styles, year) -> setProfitStyle(scale(pos.getPercentatgeProfitWithDividends(), RoundingMode.HALF_UP), styles, cell));
+		COLUMNS.put("Ganancias realizadas", (cell, pos, styles, year) -> setProfitStyle(scale(pos.getRealizedGains(), RoundingMode.HALF_UP), styles, cell));
+		COLUMNS.put("Beneficio total", (cell, pos, styles, year) -> setProfitStyle(scale(pos.getTotalProfitWithDividends(), RoundingMode.HALF_UP), styles, cell));
 		
 		//-----------MONTHS----
 		COLUMNS.put("Enero", (cell, pos, styles, year) -> styleDividendCell(pos, processDividend(pos, YearMonth.of(year, 1)), cell, styles));
